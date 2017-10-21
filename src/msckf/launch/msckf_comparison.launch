@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- launch feature tracker, MSCKF, and another MSCKF with IMU only, for comparison -->
+    <include file="$(find msckf)/launch/feature_tracker.launch"/>
+    <remap from="imu_vel" to="/kitti_player/oxts/imu_vel"/>
+    <node pkg="msckf" type="msckf_node" name="msckf_node">
+        <remap from="camera/image_rect" to="/kitti_player/grayscale/left/image_rect"/>
+    </node>
+    <node pkg="msckf" type="msckf_node" name="msckf_imu_only">
+        <remap from="/features" to="disable_features"/>
+        <remap from="camera/image_rect" to="disable_images"/>
+        <remap from="/odom_combined" to="/imu_only_odom"/>
+    </node>
+</launch>

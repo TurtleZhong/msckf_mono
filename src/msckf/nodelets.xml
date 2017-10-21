@@ -1,0 +1,18 @@
+<library path="lib/libfeature_tracking_nodelet">
+    <class name="feature_tracker/feature_tracking_nodelet"
+           type="feature_tracker::FeatureTrackingNodelet"
+           base_class_type="nodelet::Nodelet">
+        <description>
+           Feature tracking nodelet.
+        </description>
+    </class>
+</library>
+<library path="lib/libmsckf_nodelet">
+<class name="msckf/msckf_nodelet"
+       type="msckf::MsckfNodelet"
+       base_class_type="nodelet::Nodelet">
+    <description>
+        MSCKF nodelet.
+    </description>
+</class>
+</library>
