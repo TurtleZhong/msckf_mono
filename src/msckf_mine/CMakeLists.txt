@@ -60,6 +60,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 add_library(${PROJECT_NAME} SHARED
     src/config.cc
+    src/data_reader.cc
 
 )
 
@@ -74,6 +75,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 add_executable(read_csv_file test/read_csv_file.cpp )
 target_link_libraries(read_csv_file ${PROJECT_NAME})
+
+add_executable(load_imu_camera_data test/load_imu_camera_data.cpp )
+target_link_libraries(load_imu_camera_data ${PROJECT_NAME})
 
 
 

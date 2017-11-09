@@ -1,3 +1,5 @@
 %YAML:1.0
 
-sequence_dir: /home/m/ws/src/msckf_mine/datasets/MH_01_easy/mav0/
+sequence_dir: ../datasets/MH_01_easy/mav0/
+imu_path: ../datasets/MH_01_easy/mav0/imu0/data.txt
+camera_path: ../datasets/MH_01_easy/mav0/cam0/data.txt
