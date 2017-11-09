@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <remap from="camera/image_rect" to="/kitti_player/grayscale/left/image_rect"/>
-    <remap from="camera/camera_info" to="/kitti_player/grayscale/left/camera_info"/>
-    <node pkg="msckf" type="feature_tracking_node" name="feature_tracker">
-    </node>
-</launch>

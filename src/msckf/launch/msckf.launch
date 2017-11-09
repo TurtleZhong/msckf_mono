@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <include file="$(find msckf)/launch/feature_tracker.launch" />
-    <remap from="imu_vel" to="/kitti_player/oxts/imu_vel"/>
-    <remap from="camera/image_rect" to="/kitti_player/grayscale/left/image_rect"/>
-    <node pkg="msckf" type="msckf_node" name="msckf_node" />
-</launch>
