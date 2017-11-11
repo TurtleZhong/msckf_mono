@@ -22,6 +22,7 @@ public:
     double      k2;
     double      p1;
     double      p2;
+    double      sigma_img;
     Mat         K;    /*Camera intrinsics*/
     Mat         TBS;  /*Sensor extrinsics wrt. the body-frame.*/
     Mat         D;    /*distortion_coefficients*/

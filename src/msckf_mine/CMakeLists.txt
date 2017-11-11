@@ -59,10 +59,12 @@ ${EIGEN3_INCLUDE_DIR}
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 add_library(${PROJECT_NAME} SHARED
+    src/msckf.cc
     src/config.cc
     src/data_reader.cc
     src/converter.cc
     src/camera.cc
+    
 
 )
 
@@ -83,6 +85,10 @@ target_link_libraries(load_imu_camera_data ${PROJECT_NAME})
 
 add_executable(camera_test test/camera_test.cpp )
 target_link_libraries(camera_test ${PROJECT_NAME})
+
+
+add_executable(msckf_construct_test test/msckf_construct_test.cpp )
+target_link_libraries(msckf_construct_test ${PROJECT_NAME})
 
 
 

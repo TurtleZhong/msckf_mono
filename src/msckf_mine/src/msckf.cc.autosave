@@ -27,7 +27,6 @@ MSCKF::~MSCKF()
 }
 
 
-
 Matrix4d MSCKF::BigOmega( const Vector3d &w){
     //constructing big omega matrix
      Matrix4d W= Matrix4d::Zero();

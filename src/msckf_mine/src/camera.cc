@@ -16,6 +16,7 @@ Camera::Camera()
     k2           = Config::get<double>("Camera.k2");
     p1           = Config::get<double>("Camera.p1");
     p2           = Config::get<double>("Camera.p2");
+    sigma_img    = Config::get<double>("sigma_img");
 
     /*K*/
     Mat k = Mat::eye(3, 3, CV_64F);
