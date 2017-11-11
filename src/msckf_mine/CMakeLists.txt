@@ -61,6 +61,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 add_library(${PROJECT_NAME} SHARED
     src/config.cc
     src/data_reader.cc
+    src/converter.cc
+    src/camera.cc
 
 )
 
@@ -78,6 +80,9 @@ target_link_libraries(read_csv_file ${PROJECT_NAME})
 
 add_executable(load_imu_camera_data test/load_imu_camera_data.cpp )
 target_link_libraries(load_imu_camera_data ${PROJECT_NAME})
+
+add_executable(camera_test test/camera_test.cpp )
+target_link_libraries(camera_test ${PROJECT_NAME})
 
 
 

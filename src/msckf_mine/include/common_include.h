@@ -51,7 +51,7 @@ using cv::Mat;
 
 using namespace std; 
 
-
+using namespace cv;
 
 #define RESET "\033[0m"
 #define BLACK "\033[30m"               /* Black */
