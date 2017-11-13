@@ -15,7 +15,7 @@ MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, cons
     /*initializing all the variables*/
     /*actually we need to check the num of the variaables*/
     this->mState = state;
-    this->mConvariance = P;
+    this->mCovariance = P;
     this->mAccPrev = Acc;
     this->mGyroPrev = Gyro;
     this->mdt = dt;
@@ -110,11 +110,53 @@ void MSCKF::processIMU(Vector3d linear_acceleration, Vector3d angular_velocity)
     this->mAccPrev  = curr_a;
     this->mGyroPrev = curr_w;
 
-    /*step6: covariance P.50*/
+    /*step6: covariance P.50 & P.88*/
+    /* |theta(l+1) |   |I3      03  03      phi_qbg  phi_qba|
+     * |  pos(l+1) |   |phi_pq  I3  I3*mdt  phi_pbg  phi_pba|
+     * |  vel(l+1) | = |phi_vq  03  I3      phi_vbg  phi_vba| + Q(noise)
+     * |   bg(l+1) |   |03      03  03      I3       03     |
+     * |   ba(l+1) |   |03      03  03      03       I3     |
+     *
+     * for details please cf.P88
+     */
 
+    MatrixXd phi = MatrixXd::Identity(15,15);
+    phi.block<3,3>(3,0) = -1.0 * skewMatrix(pre_R * y_hat);  /*phi_pq*/
+    phi.block<3,3>(6,0) = -1.0 * skewMatrix(pre_R * s_hat);  /*phi_vq*/
 
+    phi.block<3,3>(3,6) = Matrix3d::Identity() * mdt;
 
+    phi.block<3,3>(0,9) = -0.5 * mdt * (pre_R + spatial_rotation); /*phi_qbg*/
+    phi.block<3,3>(6,9) = 0.25 * mdt * mdt * (skewMatrix(spatial_rotation * curr_a) * (pre_R + spatial_rotation));/*phi_qvbg*/
+    phi.block<3,3>(3,9) = 0.5 * mdt * phi.block<3,3>(6,9);/*phi_qpbg*/
 
+    phi.block<3,3>(0,12) = 0.5 * mdt * (pre_R + spatial_rotation);
+    Matrix3d phi_vba = -0.5 * mdt * (pre_R + spatial_rotation) + 0.25 * mdt * mdt * (skewMatrix(spatial_rotation * curr_a) * (pre_R + spatial_rotation));
+    phi.block<3,3>(6,12) = phi_vba;
+    phi.block<3,3>(3,12) = 0.5 * mdt * phi_vba;
+
+    Matrix<double, 15, 15> Nc;
+    Matrix<double, 15, 1> Nc_diag;
+    Nc_diag <<
+        mIMUParams.sigma_gc*mIMUParams.sigma_gc * Vector3d(1, 1, 1),Vector3d(0, 0, 0),
+        mIMUParams.sigma_ac*mIMUParams.sigma_ac * Vector3d(1, 1, 1),
+        mIMUParams.sigma_wgc*mIMUParams.sigma_wgc * Vector3d(1, 1, 1),
+        mIMUParams.sigma_wac*mIMUParams.sigma_wac * Vector3d(1, 1, 1);
+
+    Nc = Nc_diag.asDiagonal();
+
+    MatrixXd Qd = 0.5 * mdt * phi * Nc * phi.transpose() + Nc;
+    mCovariance.block<15,15>(0,0) = phi * mCovariance.block<15,15>(0,0) * phi.transpose() + Qd;
+
+    /* step7: update the PIC and PCI
+     * may be some error!
+     * we know that the covariance is structed as |PII PIC|
+     *                                            |PCI PCC|
+     * I -> Imu
+     * C -> Camera
+     */
+    mCovariance.block(0, 15, 15, mCovariance.cols() - 15) = phi * mCovariance.block(0, 15, 15, mCovariance.cols() - 15);
+    mCovariance.block(15, 0, mCovariance.rows() - 15, 15) = mCovariance.block(0, 15, 15, mCovariance.cols() - 15).transpose();
 
 }
 
