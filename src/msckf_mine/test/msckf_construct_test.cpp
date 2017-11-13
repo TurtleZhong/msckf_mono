@@ -24,9 +24,9 @@ int main(int argc, char *argv[])
 
     cout << "msckf variables:\n";
     cout << "--state = \n" << msckf.mState << endl;
-    cout << "--covariance = \n" << msckf.mConvariance << endl;
-    cout << "--AccMeasurements = \n" << msckf.mAccMeasurement << endl;
-    cout << "--GyroMeasurements = \n" << msckf.mGyroMeasurement << endl;
+    cout << "--covariance = \n" << msckf.mCovariance << endl;
+    cout << "--AccMeasurements = \n" << msckf.mAccPrev << endl;
+    cout << "--GyroMeasurements = \n" << msckf.mGyroPrev << endl;
     cout << "--CameraParams:\n";
     cout << "--sigma_img= " << msckf.mCAMParams.sigma_img << endl;
     cout << "--camera_intrinsic = \n" << msckf.mCAMParams.getK() << endl;

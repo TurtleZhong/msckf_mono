@@ -37,8 +37,8 @@ public:
         g          = Config::get<double>("g");
         sigma_ac   = Config::get<double>("accelerometer_noise_density");    // [ rad / s / sqrt(Hz) ]   ( gyro "white noise" )
         sigma_gc   = Config::get<double>("gyroscope_noise_density");        // [ rad / s^2 / sqrt(Hz) ] ( gyro bias diffusion )
-        sigma_wac  = Config::get<double>("3.0000e-3");                      // [ m / s^2 / sqrt(Hz) ]   ( accel "white noise" )
-        sigma_wgc  = Config::get<double>("1.9393e-05");                     // [ m / s^3 / sqrt(Hz) ].  ( accel bias diffusion )
+        sigma_wac  = Config::get<double>("accelerometer_random_walk");                      // [ m / s^2 / sqrt(Hz) ]   ( accel "white noise" )
+        sigma_wgc  = Config::get<double>("gyroscope_random_walk");                     // [ m / s^3 / sqrt(Hz) ].  ( accel bias diffusion )
     }
 
     double g;

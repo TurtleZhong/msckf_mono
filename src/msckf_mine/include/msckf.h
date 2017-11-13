@@ -24,7 +24,7 @@ public:
 
     /*EKF propagation variables member*/
     VectorXd mState;
-    MatrixXd mConvariance;
+    MatrixXd mCovariance;
 
     /*Camera*/
     Camera mCAMParams;

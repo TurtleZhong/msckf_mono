@@ -90,6 +90,9 @@ target_link_libraries(camera_test ${PROJECT_NAME})
 add_executable(msckf_construct_test test/msckf_construct_test.cpp )
 target_link_libraries(msckf_construct_test ${PROJECT_NAME})
 
+add_executable(eigen_function_test test/eigen_function_test.cpp )
+target_link_libraries(eigen_function_test ${PROJECT_NAME})
+
 
 
 

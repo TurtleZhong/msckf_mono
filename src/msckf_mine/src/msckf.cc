@@ -88,8 +88,8 @@ void MSCKF::processIMU(Vector3d linear_acceleration, Vector3d angular_velocity)
 
     /* step4: calculate s_hat and y_hat cf. P49*/
 
-    s_hat = 0.5 * dt * (dR.transpose() * curr_a + mAccPrev);
-    y_hat = 0.5 * dt * s_hat;
+    s_hat = 0.5 * mdt * (d_R.transpose() * curr_a + mAccPrev);
+    y_hat = 0.5 * mdt * s_hat;
 
     /* step5: update q v p*/
     pre_R = spatial_rotation;
@@ -173,7 +173,8 @@ Matrix4d MSCKF::calcOmegaMatrix(const Vector3d &w)
 
 Quaterniond MSCKF::calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d curr_w, double &dt)
 {
-    Vector4d q0(0.0, 0,0, 0.0, 1.0);
+    Vector4d q0;
+    q0 << 0.0, 0,0, 0.0, 1.0;
     Vector4d k1, k2, k3, k4, d_q;
 
     k1 = 0.5 * calcOmegaMatrix(mGyroPrev) * q0;
