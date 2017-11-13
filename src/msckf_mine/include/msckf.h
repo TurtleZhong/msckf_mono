@@ -33,8 +33,8 @@ public:
     IMU_PARAM mIMUParams;
 
     /*accelerometer and gyroscope measurement*/
-    Vector3d mAccMeasurement;       /*[m s^-2]*/
-    Vector3d mGyroMeasurement;      /*[rad s^-1]*/
+    Vector3d mAccPrev;       /*[m s^-2]*/
+    Vector3d mGyroPrev;      /*[rad s^-1]*/
 
     Vector3d mGravity;
 
@@ -45,6 +45,13 @@ public:
 
     Matrix4d BigOmega( const Vector3d &w );
     Matrix3d skewMatrix(const Vector3d &v);
+
+    void processIMU( Vector3d linear_acceleration, Vector3d angular_velocity);
+
+
+    Matrix4d    calcOmegaMatrix(const Vector3d &w);
+    Quaterniond calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d curr_w, double &dt);
+
 
 
 
