@@ -33,7 +33,10 @@ int main(int argc, char *argv[])
     //appending the current body pose
     state.segment<10>(Xsize) = state.head(10);
 
-    cout << "--after.size = \n" << state.rows() << endl;
+    cout << "--after.size = \n" << state.size() << endl;
+
+    MatrixXd covariance = MatrixXd::Zero(15,15);
+    cout << "--covariance size = " << covariance.size() << endl;
 
 
 

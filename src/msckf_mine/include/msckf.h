@@ -46,11 +46,16 @@ public:
     Matrix4d BigOmega( const Vector3d &w );
     Matrix3d skewMatrix(const Vector3d &v);
 
-    void processIMU( Vector3d linear_acceleration, Vector3d angular_velocity);
+    void propagateIMU( Vector3d linear_acceleration, Vector3d angular_velocity);
 
 
     Matrix4d    calcOmegaMatrix(const Vector3d &w);
     Quaterniond calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d curr_w, double &dt);
+
+    /*Augmentation cf. P.52*/
+    void Augmentation();
+
+    /*update step*/
 
 
 

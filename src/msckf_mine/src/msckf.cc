@@ -54,7 +54,7 @@ Matrix3d MSCKF::skewMatrix( const Vector3d &v)
 }
 
 
-void MSCKF::processIMU(Vector3d linear_acceleration, Vector3d angular_velocity)
+void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity)
 {
     /*Here we use the formulation in P.48 - P.52*/
     /*c.f. Monocular Visual Inertial Odometry on a Mobile Device*/
@@ -187,6 +187,37 @@ Quaterniond MSCKF::calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d
     d_q = d_q / d_q.norm();
 
     return Quaterniond(d_q);
+
+}
+
+void MSCKF::Augmentation()
+{
+    // when an image is captured, the current body quaternion, position and velocity are added to the
+    // state vector and the covariance is augmented accordingly.
+
+    /*step1: augmente the state vector*/
+
+    int stateSize = mState.rows();
+    mState.conservativeResize(stateSize + 10);
+
+    mState.segment<10>(stateSize) = mState.head(10);
+
+    /*step2: augmente the covariance
+     * It should be noted that in step 1 we have add an image
+     */
+    int N = (mState.size() - 16) / 10; // N = number of image
+
+    MatrixXd Jpi = MatrixXd::Zero(9, mState.size()-(N+1));
+    MatrixXd I9 = MatrixXd::Identity(9,9);
+    Jpi.block<9,9>(0,0) = I9;
+
+    int covSize = mCovariance.rows();
+    mCovariance.conservativeResize(covSize+9, covSize+9); /*since we have add an image, so the covariance need to be augmented*/
+
+    mCovariance.block(0, covSize,covSize,9) = mCovariance.block(0,0,covSize,covSize)*Jpi.transpose();
+
+    mCovariance.block(covSize,0,9,covSize) = mCovariance.block(0, covSize,covSize,9).transpose();
+    mCovariance.block(covSize,covSize,9,9) = Jpi*mCovariance.block(0, covSize,covSize,9);
 
 }
 
