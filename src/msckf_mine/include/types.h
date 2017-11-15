@@ -29,6 +29,8 @@ public:
     string img_name;
 };
 
+
+
 class IMU_PARAM
 {
 public:
@@ -47,6 +49,25 @@ public:
     double sigma_wac;
     double sigma_wgc;
 
+};
+
+class ORB_PARAM
+{
+public:
+    ORB_PARAM()
+    {
+        nFeatures    = Config::get<int>("ORBextractor.nFeatures");
+        scaleFactor  = Config::get<float>("ORBextractor.scaleFactor");
+        nLevels      = Config::get<int>("ORBextractor.nLevels");
+        iniThFAST    = Config::get<int>("ORBextractor.iniThFAST");
+        minThFAST    = Config::get<int>("ORBextractor.minThFAST");
+
+    }
+    int nFeatures;
+    float scaleFactor;
+    int nLevels;
+    int iniThFAST;
+    int minThFAST;
 };
 
 }

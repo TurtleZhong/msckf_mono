@@ -3,7 +3,9 @@
 #include "common_include.h"
 #include "converter.h"
 #include "camera.h"
+#include "ORBextractor.h"
 #include "types.h"
+
 
 using namespace std;
 using namespace cv;
@@ -58,6 +60,16 @@ public:
     /*update step*/
 
 
+
+
+    /*ORB Feature Parts*/
+    ORB_PARAM orbParam;
+    Mat mImage; /*it should be noted that the image was undistorted in function unDistorImage()*/
+    std::vector<cv::KeyPoint> mvKeys;
+    cv::Mat mDescriptors;
+
+    void unDistortImage();
+    void extractFeatures();
 
 
 };

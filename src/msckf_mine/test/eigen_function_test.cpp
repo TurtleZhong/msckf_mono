@@ -39,12 +39,6 @@ int main(int argc, char *argv[])
     MatrixXd covariance = MatrixXd::Zero(15,15);
     cout << "--covariance size = " << covariance.size() << endl;
 
-    int M = 10;
-    MatrixXd Hxi = MatrixXd::Zero(10, 10);
-    int cols = 0;
-    cols = Hxi.rows();
-    Hxi.segment<2,cols>(4,1) = MatrixXd::Zero();
-    cout << "--Hxi = \n" << Hxi << endl;
 
 
 

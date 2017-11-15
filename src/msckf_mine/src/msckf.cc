@@ -222,7 +222,26 @@ void MSCKF::Augmentation()
 }
 
 
+/*ORB_parts*/
 
+void MSCKF::unDistortImage()
+{
+    cv::Mat tmp = mImage.clone();
+    cv::undistort(tmp, mImage, mCAMParams.getK(), mCAMParams.getD(), cv::Mat());
+    cv::imshow("undistort", mImage);
+    cv::waitKey(0);
 
+}
+
+void MSCKF::extractFeatures()
+{
+    /*step1: --> undistort the image*/
+    unDistortImage();
+    /*step2: --> extract the features*/
+    ORBextractor *pOrbExtractor = new ORBextractor(orbParam.nFeatures, orbParam.scaleFactor, orbParam.nLevels,
+                                                   orbParam.iniThFAST, orbParam.minThFAST);
+    (*pOrbExtractor)(mImage,cv::Mat(),mvKeys,mDescriptors);
+
+}
 
 }

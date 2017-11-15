@@ -64,6 +64,7 @@ add_library(${PROJECT_NAME} SHARED
     src/data_reader.cc
     src/converter.cc
     src/camera.cc
+    src/ORBextractor.cc
     
 
 )
@@ -92,6 +93,9 @@ target_link_libraries(msckf_construct_test ${PROJECT_NAME})
 
 add_executable(eigen_function_test test/eigen_function_test.cpp )
 target_link_libraries(eigen_function_test ${PROJECT_NAME})
+
+add_executable(orb_feature_extract test/orb_feature_extract.cpp )
+target_link_libraries(orb_feature_extract ${PROJECT_NAME})
 
 
 
