@@ -36,7 +36,7 @@ Camera::Camera()
 
     /*Tbs*/
     string Tbs = Config::get<string>("T_BS");
-    cout << BOLDCYAN"Camera.Tbs = " << Tbs << WHITE << endl;
+    //cout << BOLDCYAN"Camera.Tbs = " << Tbs << WHITE << endl;
 
     stringstream ss(Tbs);
     Mat tbs(4,4,CV_64F);

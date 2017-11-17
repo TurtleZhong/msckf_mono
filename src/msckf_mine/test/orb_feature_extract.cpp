@@ -31,15 +31,23 @@ int main(int argc, char *argv[])
 
     MSCKF msckf;
 
-    Mat image = cv::imread("/home/m/ws/src/msckf_mine/datasets/MH_01_easy/mav0/cam0/data/1403636579763555584.png", CV_LOAD_IMAGE_GRAYSCALE);
-    msckf.mImage = image.clone();
-    msckf.extractFeatures();
+    DataReader data;
+    vector<CAMERA> vCameraData = data.mvCameraData;
 
-    cv::Mat imFeature = showFeatures(msckf.mImage, msckf.mvKeys);
+    for(vector<CAMERA>::iterator iter = vCameraData.begin(); iter!=vCameraData.end();iter++)
+    {
+        string imagePath = iter->img_name;
+        Mat image = cv::imread(imagePath,CV_LOAD_IMAGE_GRAYSCALE);
+        //cout << "image_path = " << imagePath << endl;
+        msckf.mImage = image.clone();
+        msckf.extractFeatures();
+        cv::Mat imFeature = showFeatures(msckf.mImage, msckf.mvKeys);
+        cv::imshow("features", imFeature);
+        cout << "feature size = " << msckf.mvKeys.size() << endl;
 
-    cv::imshow("features", imFeature);
+        cv::waitKey(0);
 
-    cv::waitKey(0);
+    }
 
     return 0;
 }

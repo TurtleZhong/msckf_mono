@@ -7,7 +7,7 @@ namespace MSCKF_MINE
 
 MSCKF::MSCKF()
 {
-
+    mpORBextractor = new ORBextractor(orbParam.nFeatures,orbParam.scaleFactor, orbParam.nLevels,orbParam.iniThFAST,orbParam.minThFAST);
 }
 
 MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, const Vector3d &Gyro, double &dt)
@@ -21,6 +21,9 @@ MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, cons
     this->mdt = dt;
 
     mGravity = Vector3d(0.0, 0.0, Config::get<double>("g"));
+
+    /*Construct the mpORBextractor*/
+    mpORBextractor = new ORBextractor(orbParam.nFeatures,orbParam.scaleFactor, orbParam.nLevels,orbParam.iniThFAST,orbParam.minThFAST);
 
 }
 
@@ -228,8 +231,8 @@ void MSCKF::unDistortImage()
 {
     cv::Mat tmp = mImage.clone();
     cv::undistort(tmp, mImage, mCAMParams.getK(), mCAMParams.getD(), cv::Mat());
-    cv::imshow("undistort", mImage);
-    cv::waitKey(0);
+//    cv::imshow("undistort", mImage);
+//    cv::waitKey(0);
 
 }
 
@@ -242,6 +245,14 @@ void MSCKF::extractFeatures()
                                                    orbParam.iniThFAST, orbParam.minThFAST);
     (*pOrbExtractor)(mImage,cv::Mat(),mvKeys,mDescriptors);
 
+}
+
+
+void MSCKF::ConstructFrame(const Mat &im, const double &timeStamp)
+{
+
+    frame = Frame(im, timeStamp, mpORBextractor);
+    mImage = im.clone();
 }
 
 }

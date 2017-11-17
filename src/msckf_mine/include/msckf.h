@@ -4,6 +4,8 @@
 #include "converter.h"
 #include "camera.h"
 #include "ORBextractor.h"
+#include "ORBmatcher.h"
+#include "frame.h"
 #include "types.h"
 
 
@@ -64,12 +66,17 @@ public:
 
     /*ORB Feature Parts*/
     ORB_PARAM orbParam;
+    ORBextractor* mpORBextractor;
     Mat mImage; /*it should be noted that the image was undistorted in function unDistorImage()*/
     std::vector<cv::KeyPoint> mvKeys;
     cv::Mat mDescriptors;
 
     void unDistortImage();
     void extractFeatures();
+
+    Frame frame;
+    void ConstructFrame(const Mat &im, const double &timeStamp);
+
 
 
 };

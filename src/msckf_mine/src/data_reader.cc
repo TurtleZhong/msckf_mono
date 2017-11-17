@@ -41,6 +41,7 @@ void DataReader::loadCamera()
     {
         CAMERA cam;
         inFile >> cam.time_stamp >> cam.img_name;
+        cam.img_name = Config::get<string>("sequence_dir") + "cam0/data/" + cam.img_name;
         mvCameraData.push_back(cam);
         inFile.get();
     }

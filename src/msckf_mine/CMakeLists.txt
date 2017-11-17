@@ -65,6 +65,9 @@ add_library(${PROJECT_NAME} SHARED
     src/converter.cc
     src/camera.cc
     src/ORBextractor.cc
+    src/ORBmatcher.cc
+    src/frame.cc
+
     
 
 )
@@ -97,7 +100,10 @@ target_link_libraries(eigen_function_test ${PROJECT_NAME})
 add_executable(orb_feature_extract test/orb_feature_extract.cpp )
 target_link_libraries(orb_feature_extract ${PROJECT_NAME})
 
+add_executable(orb_feature_match_test test/orb_feature_match_test.cpp )
+target_link_libraries(orb_feature_match_test ${PROJECT_NAME})
 
-
+add_executable(frame_and_orb_test test/frame_and_orb_test.cpp )
+target_link_libraries(frame_and_orb_test ${PROJECT_NAME})
 
 
