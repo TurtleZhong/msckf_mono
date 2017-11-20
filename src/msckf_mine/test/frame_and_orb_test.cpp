@@ -139,20 +139,19 @@ int main(int argc, char *argv[])
         cv::Mat imFeature = showFeatures(msckf.frame.mImageGray, msckf.frame.mvKeysUn);
         cv::imshow("features", imFeature);
 
-        if(count > 10)
+        if(count > 0)
         {
             ORBmatcher orbMatcher(0.7);
             orbMatcher.MatcheTwoFrames(msckf.frame, lastFrame, false);
             cout << "matches = " << msckf.frame.matchesId.size() << endl;
             cv::Mat imMatch = DrawFrameMatch(msckf.frame, lastFrame);
             cv::imshow("matches", imMatch);
-            cv::waitKey(1);
+            cv::waitKey(0);
 
         }
         count++;
-        lastFrame = Frame(msckf.frame);
-
-        cv::waitKey(1);
+        if (count == 1)
+            lastFrame = Frame(msckf.frame);
 
     }
 

@@ -34,8 +34,11 @@ g: 9.81
 # ORB Parameters
 #--------------------------------------------------------------------------------------------
 
-# ORB Extractor: Number of features per image
-ORBextractor.nFeatures: 500
+# ORB Extractor: Number of features per image, only use when reset
+ORBextractor.nFeaturesInit: 1000
+
+# ORB Extractor: Number of features per image 
+ORBextractor.nFeatures: 600
 
 # ORB Extractor: Scale factor between levels in the scale pyramid 	
 ORBextractor.scaleFactor: 1.2

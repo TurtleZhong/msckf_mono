@@ -84,6 +84,8 @@ public:
 
     std::vector<cv::Mat> mvImagePyramid;
 
+    void setFeatureNum(const int &num);
+
 protected:
 
     void ComputePyramid(cv::Mat image);

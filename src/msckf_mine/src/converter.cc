@@ -1,6 +1,7 @@
 #include "converter.h"
 #include "common_include.h"
 
+
 namespace MSCKF_MINE
 {
 std::vector<cv::Mat> Converter::toDescriptorVector(const cv::Mat &Descriptors)
@@ -129,7 +130,16 @@ cv::Mat Converter::toCvMat(const Eigen::Vector3d &m, int flag = 1)
 
 }
 
+map<int,int> Converter::swapMatchesId(const map<int, int> &matchesId)
+{
+    map<int,int> matches;
+    for(map<int,int>::const_iterator iter = matchesId.begin(); iter!=matchesId.end(); iter++ )
+    {
+        matches[iter->second] = iter->first;  /*feedframe curr_frame*/
+    }
 
+    return matches;
+}
 
 
 }

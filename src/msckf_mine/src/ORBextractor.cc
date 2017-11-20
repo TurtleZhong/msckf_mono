@@ -1080,4 +1080,9 @@ void ORBextractor::ComputePyramid(cv::Mat image)
 
 }
 
+void ORBextractor::setFeatureNum(const int &num)
+{
+    nfeatures = num;
+}
+
 } //namespace ORB_SLAM

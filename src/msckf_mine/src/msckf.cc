@@ -39,11 +39,11 @@ MSCKF::~MSCKF()
 Matrix4d MSCKF::BigOmega( const Vector3d &w)
 {
     //constructing big omega matrix
-     Matrix4d W= Matrix4d::Zero();
-     W.block<3,3>(0,0)  = -1*skewMatrix(w) ;
-     W.block<1,3>(3,0)  =  -w.transpose();
-     W.block<3,1>(0,3)  =  w;
-     return W;
+    Matrix4d W= Matrix4d::Zero();
+    W.block<3,3>(0,0)  = -1*skewMatrix(w) ;
+    W.block<1,3>(3,0)  =  -w.transpose();
+    W.block<3,1>(0,3)  =  w;
+    return W;
 
 }
 
@@ -144,10 +144,10 @@ void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity
     Matrix<double, 15, 15> Nc;
     Matrix<double, 15, 1> Nc_diag;
     Nc_diag <<
-        mIMUParams.sigma_gc*mIMUParams.sigma_gc * Vector3d(1, 1, 1),Vector3d(0, 0, 0),
-        mIMUParams.sigma_ac*mIMUParams.sigma_ac * Vector3d(1, 1, 1),
-        mIMUParams.sigma_wgc*mIMUParams.sigma_wgc * Vector3d(1, 1, 1),
-        mIMUParams.sigma_wac*mIMUParams.sigma_wac * Vector3d(1, 1, 1);
+               mIMUParams.sigma_gc*mIMUParams.sigma_gc * Vector3d(1, 1, 1),Vector3d(0, 0, 0),
+            mIMUParams.sigma_ac*mIMUParams.sigma_ac * Vector3d(1, 1, 1),
+            mIMUParams.sigma_wgc*mIMUParams.sigma_wgc * Vector3d(1, 1, 1),
+            mIMUParams.sigma_wac*mIMUParams.sigma_wac * Vector3d(1, 1, 1);
 
     Nc = Nc_diag.asDiagonal();
 
@@ -253,8 +253,8 @@ void MSCKF::unDistortImage()
 {
     cv::Mat tmp = mImage.clone();
     cv::undistort(tmp, mImage, mCAMParams.getK(), mCAMParams.getD(), cv::Mat());
-//    cv::imshow("undistort", mImage);
-//    cv::waitKey(0);
+    //    cv::imshow("undistort", mImage);
+    //    cv::waitKey(0);
 
 }
 
@@ -277,9 +277,19 @@ void MSCKF::ConstructFrame(const Mat &im, const double &timeStamp)
     mImage = im.clone();
 }
 
-void MSCKF::ConstructFrame()
+void MSCKF::ConstructFrame(bool reset)
 {
-    frame = Frame(mImage, mTimeStamp, mpORBextractor);
+    if(!reset)
+    {
+        mpORBextractor->setFeatureNum(Config::get<int>("ORBextractor.nFeaturesInit"));
+        frame = Frame(mImage, mTimeStamp, mpORBextractor);
+    }
+
+    else
+    {
+        mpORBextractor->setFeatureNum(Config::get<int>("ORBextractor.nFeatures"));
+        frame = Frame(mImage, mTimeStamp, mpORBextractor);
+    }
 }
 
 
@@ -297,25 +307,90 @@ void MSCKF::RunFeatureMatching()
     mvLostFeatures.clear();
     mvLostFeatureCamIdx.clear();
 
-    /*run feature matching*/
+
+    /*step 1: Construct the frame*/
+    this->ConstructFrame(mbReset);
+
+    /*we need to know if the status is true or not */
+    if(!mbReset)
+    {
+        /*in this case, the last frame is not empty so we can run the feature matching*/
+        /*the most inportment part is frame.matchesID
+         */
+
+        ORBmatcher orbMatcher(0.7);
+        orbMatcher.MatcheTwoFrames(frame, feedframe, false);
+
+        /*after run we have got the matchesID and below are matches's data structure
+         * id of feedframe, id of currframe */
+
+        map<int,int> matches = Converter::swapMatchesId(frame.matchesId);
+        map<int,int>::iterator matches_iter;
+
+        for(int j = 0; j < mvFeaturesIdx.size(); j++)
+        {
+            int feedId = mvFeaturesIdx[j](0); /*key*/
+            matches_iter = matches.find(feedId);
+            if(matches_iter!=matches.end())
+            {
+                /*feature were tracked!*/
+                int M = mvFeatures[j].rows();
+                int N = mvFeatures[j].cols();
+                mvFeatures[j].conservativeResize(M,N+1);
+                mvFeatures[j](0,N) = frame.mvKeys[matches_iter->second].pt.x;
+                mvFeatures[j](1,N) = frame.mvKeys[matches_iter->second].pt.y;
+
+            }
+            else
+            {
+                /*feature were not tracked, we need remove it and augment the lostfeatures*/
+                mvLostFeatures.push_back(mvFeatures[j]);
+
+                mvLostFeatureCamIdx.push_back(mvFeaturesIdx[j](1));
+
+                mvFeatures.erase(mvFeatures.begin() + j);
+                mvFeaturesIdx.erase(mvFeaturesIdx.begin() + j);
+
+            }
+
+
+        }
 
 
 
+    }
+    else
+    {
+        /* since the mbReset is true, there are two cases
+         * case1: the first frame
+         * case2: the mvFeatures.size() < 50 which means the tracked features is two small
+         */
+        feedframe = Frame(frame);
 
+        /*step 2: AugmentNewFeatures*/
 
-    ORBmatcher orbMatcher(0.7);
-    orbMatcher.MatcheTwoFrames(frame, lastframe, false);
-
-    /*after run we have got the matchesID and below are matchesID's data structure
-     * id of currframe, id of lastfrma*/
-
-
-
-
-
-
+        AugmentNewFeatures();
+        mbReset = false;
+    }
 }
 
+/**
+ * @brief MSCKF::AugmentNewFeatures-> used in RunFeatureMatching();
+ */
+void MSCKF::AugmentNewFeatures()
+{
+    mvFeatures    = vector<MatrixXd>(frame.mvKeys.size(), MatrixXd::Zero(2,1));
+    mvFeaturesIdx = vector<Vector2i>(frame.mvKeys.size(), Vector2i::Zero());
+
+    /*since the filter is reseted, we need add all the features to the feature manager vector*/
+
+    for(int i = 0; i < frame.mvKeys.size(); i++)
+    {
+        mvFeatures[i](0,0) = frame.mvKeys[i].pt.x;
+        mvFeatures[i](1,0) = frame.mvKeys[i].pt.y;
+        mvFeaturesIdx[i]   = Vector2i(i, int(frame.mnId));
+    }
+}
 
 
 

@@ -77,12 +77,12 @@ public:
     void extractFeatures();
 
     Frame frame;
-    Frame lastframe;
+    Frame feedframe;
     bool mbReset;  /*only use in the first frame and the filter is reseted*/
 
 
     void ConstructFrame(const Mat &im, const double &timeStamp); /*for test*/
-    void ConstructFrame();
+    void ConstructFrame(bool reset = false);
 
     void RunFeatureMatching();
 
@@ -98,6 +98,9 @@ public:
     vector<Eigen::Vector2i> mvFeaturesIdx;      /* i , imageNum*/
     vector<Eigen::MatrixXd> mvLostFeatures;
     vector<int>             mvLostFeatureCamIdx;
+
+    void AugmentNewFeatures();
+    void ManageOldFeatures();
 
 
 

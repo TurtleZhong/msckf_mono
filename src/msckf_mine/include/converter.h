@@ -2,6 +2,9 @@
 #define CONVERTER_H
 #include<opencv2/core/core.hpp>
 #include<Eigen/Dense>
+#include <map>
+
+using namespace std;
 
 namespace MSCKF_MINE
 {
@@ -25,6 +28,7 @@ public:
 
     //static Sophus::SE3 toSE3(const cv::Mat &cvT);
     static cv::Mat toCvMat(const Eigen::Vector3d &m, int flag);
+    static map<int,int> swapMatchesId(const map<int,int>& matchesId);
 
 };
 
