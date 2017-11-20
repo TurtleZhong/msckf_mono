@@ -319,44 +319,9 @@ void MSCKF::RunFeatureMatching()
          */
 
         ORBmatcher orbMatcher(0.7);
-        orbMatcher.MatcheTwoFrames(frame, feedframe, false);
+        orbMatcher.MatcheTwoFrames(frame, feedframe, false); /*it is important to use the pior to make the robust match*/
 
-        /*after run we have got the matchesID and below are matches's data structure
-         * id of feedframe, id of currframe */
-
-        map<int,int> matches = Converter::swapMatchesId(frame.matchesId);
-        map<int,int>::iterator matches_iter;
-
-        for(int j = 0; j < mvFeaturesIdx.size(); j++)
-        {
-            int feedId = mvFeaturesIdx[j](0); /*key*/
-            matches_iter = matches.find(feedId);
-            if(matches_iter!=matches.end())
-            {
-                /*feature were tracked!*/
-                int M = mvFeatures[j].rows();
-                int N = mvFeatures[j].cols();
-                mvFeatures[j].conservativeResize(M,N+1);
-                mvFeatures[j](0,N) = frame.mvKeys[matches_iter->second].pt.x;
-                mvFeatures[j](1,N) = frame.mvKeys[matches_iter->second].pt.y;
-
-            }
-            else
-            {
-                /*feature were not tracked, we need remove it and augment the lostfeatures*/
-                mvLostFeatures.push_back(mvFeatures[j]);
-
-                mvLostFeatureCamIdx.push_back(mvFeaturesIdx[j](1));
-
-                mvFeatures.erase(mvFeatures.begin() + j);
-                mvFeaturesIdx.erase(mvFeaturesIdx.begin() + j);
-
-            }
-
-
-        }
-
-
+        ManageOldFeatures();
 
     }
     else
@@ -389,6 +354,41 @@ void MSCKF::AugmentNewFeatures()
         mvFeatures[i](0,0) = frame.mvKeys[i].pt.x;
         mvFeatures[i](1,0) = frame.mvKeys[i].pt.y;
         mvFeaturesIdx[i]   = Vector2i(i, int(frame.mnId));
+    }
+}
+
+void MSCKF::ManageOldFeatures()
+{
+    map<int,int> matches = Converter::swapMatchesId(frame.matchesId);
+    map<int,int>::iterator matches_iter;
+
+    for(int j = 0; j < mvFeaturesIdx.size(); j++)
+    {
+        int feedId = mvFeaturesIdx[j](0); /*key*/
+        matches_iter = matches.find(feedId);
+        if(matches_iter!=matches.end())
+        {
+            /*feature were tracked!*/
+            int M = mvFeatures[j].rows();
+            int N = mvFeatures[j].cols();
+            mvFeatures[j].conservativeResize(M,N+1);
+            mvFeatures[j](0,N) = frame.mvKeys[matches_iter->second].pt.x;
+            mvFeatures[j](1,N) = frame.mvKeys[matches_iter->second].pt.y;
+
+        }
+        else
+        {
+            /*feature were not tracked, we need remove it and augment the lostfeatures*/
+            mvLostFeatures.push_back(mvFeatures[j]);
+
+            mvLostFeatureCamIdx.push_back(mvFeaturesIdx[j](1));
+
+            mvFeatures.erase(mvFeatures.begin() + j);
+            mvFeaturesIdx.erase(mvFeaturesIdx.begin() + j);
+
+        }
+
+
     }
 }
 

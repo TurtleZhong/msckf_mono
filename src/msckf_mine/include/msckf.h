@@ -60,7 +60,7 @@ public:
     void Augmentation();
     void Marginalizefilter();
 
-    /*update step*/
+    /*Feature part and update step*/
 
     /*ORB Feature Parts*/
     ORB_PARAM orbParam;
@@ -102,7 +102,7 @@ public:
     void AugmentNewFeatures();
     void ManageOldFeatures();
 
-
+    void CalcResidualsAndStackingIt();
 
 };
 
