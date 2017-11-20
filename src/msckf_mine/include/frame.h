@@ -29,7 +29,8 @@ public:
     Camera mCamera;
 
     int N;
-    int mnId;
+    unsigned int mnId;
+    static long unsigned int nNextId;
 
     std::vector<cv::KeyPoint> mvKeys;
     std::vector<cv::KeyPoint> mvKeysUn;
@@ -38,7 +39,7 @@ public:
 
     cv::Mat mImageGray;
 
-    map<int,int> matchesId; //matches lastframe features[id], currentframe features[id]
+    map<int,int> matchesId; //matches  currentframe features[id], lastframe features[id]
 
     static bool mbInitialComputations;
 

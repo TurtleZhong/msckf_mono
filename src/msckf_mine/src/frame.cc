@@ -3,8 +3,9 @@
 
 namespace MSCKF_MINE
 {
-
+long unsigned int Frame::nNextId=0;
 bool Frame::mbInitialComputations=true;
+
 float Frame::mnMinX, Frame::mnMinY, Frame::mnMaxX, Frame::mnMaxY;
 float Frame::mfGridElementWidthInv, Frame::mfGridElementHeightInv;
 
@@ -27,6 +28,7 @@ Frame::Frame(const Frame &frame)
 Frame::Frame(const Mat &im, const double &timeStamp, ORBextractor *extractor)
     :mTimeStamp(timeStamp),mpORBextractor(extractor)
 {
+    mnId = nNextId++;
     im.copyTo(this->mImageGray);
     this->ExtractORB(mImageGray);
     N = mvKeys.size();

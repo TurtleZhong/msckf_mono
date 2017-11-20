@@ -58,16 +58,18 @@ public:
 
     /*Augmentation cf. P.52*/
     void Augmentation();
+    void Marginalizefilter();
 
     /*update step*/
-
-
-
 
     /*ORB Feature Parts*/
     ORB_PARAM orbParam;
     ORBextractor* mpORBextractor;
     Mat mImage; /*it should be noted that the image was undistorted in function unDistorImage()*/
+    double mTimeStamp;
+
+    void imageComing(const cv::Mat &image, const double timestamp);
+
     std::vector<cv::KeyPoint> mvKeys;
     cv::Mat mDescriptors;
 
@@ -75,7 +77,27 @@ public:
     void extractFeatures();
 
     Frame frame;
-    void ConstructFrame(const Mat &im, const double &timeStamp);
+    Frame lastframe;
+    bool mbReset;  /*only use in the first frame and the filter is reseted*/
+
+
+    void ConstructFrame(const Mat &im, const double &timeStamp); /*for test*/
+    void ConstructFrame();
+
+    void RunFeatureMatching();
+
+
+
+    /* Residuals and Update step
+     * Since we have extract features from the consecutive image
+     * We have track this features and use the measurements to update
+     * the msckf
+     */
+    /*Feature Mannager Parts*/
+    vector<Eigen::MatrixXd> mvFeatures;
+    vector<Eigen::Vector2i> mvFeaturesIdx;      /* i , imageNum*/
+    vector<Eigen::MatrixXd> mvLostFeatures;
+    vector<int>             mvLostFeatureCamIdx;
 
 
 

@@ -38,10 +38,10 @@ cv::Mat DrawFrameMatch(Frame &mCurrentFrame, Frame &mLastFrame)
     mCurrentFrame.mImageGray.copyTo(curr_Im);
 
     mLastFrame.mImageGray.copyTo(last_Im);
-    cout << "size = " << mLastFrame.mImageGray.rows << endl;
+//    cout << "size = " << mLastFrame.mImageGray.rows << endl;
 
-    cv::imshow("last", mLastFrame.mImageGray);
-    cv::waitKey(0);
+//    cv::imshow("last", mLastFrame.mImageGray);
+    //cv::waitKey(0);
     if(curr_Im.channels()<3) //this should be always true
     {
         cvtColor(curr_Im,curr_Im,CV_GRAY2BGR);
@@ -130,8 +130,11 @@ int main(int argc, char *argv[])
         Mat image = cv::imread(imagePath,CV_LOAD_IMAGE_GRAYSCALE);
         //cout << "image_path = " << imagePath << endl;
 
+        msckf.imageComing(image,iter->time_stamp);
+        msckf.ConstructFrame();
 
-        msckf.ConstructFrame(image,iter->time_stamp);
+        //msckf.ConstructFrame(image,iter->time_stamp);
+        cout <<BOLDRED << "Frame id = " << msckf.frame.mnId << endl;
 
         cv::Mat imFeature = showFeatures(msckf.frame.mImageGray, msckf.frame.mvKeysUn);
         cv::imshow("features", imFeature);
@@ -143,7 +146,7 @@ int main(int argc, char *argv[])
             cout << "matches = " << msckf.frame.matchesId.size() << endl;
             cv::Mat imMatch = DrawFrameMatch(msckf.frame, lastFrame);
             cv::imshow("matches", imMatch);
-            cv::waitKey(0);
+            cv::waitKey(1);
 
         }
         count++;
