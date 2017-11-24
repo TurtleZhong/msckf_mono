@@ -392,6 +392,11 @@ void MSCKF::ManageOldFeatures()
     }
 }
 
+void MSCKF::CalcResidualsAndStackingIt()
+{
+
+}
+
 
 
 
