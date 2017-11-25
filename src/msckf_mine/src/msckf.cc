@@ -2,6 +2,7 @@
 #include "config.h"
 #include <Eigen/Dense>
 
+
 namespace MSCKF_MINE
 {
 
@@ -392,10 +393,101 @@ void MSCKF::ManageOldFeatures()
     }
 }
 
+
+Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses)
+{
+    ceres::Problem *problem;
+    /*build the optimization problem*/
+    ceres::LossFunction* loss_function = new ceres::HuberLoss(1.0);
+    ceres::LocalParameterization* quaternion_local_parameterization =
+            new EigenQuaternionParameterization;
+    unsigned int i = 0;
+
+    Vector3d point3d(1.0,1.0,1.0); /*the initial guess*/
+    for(vector<Vector2d>::iterator z_iter = z.begin(); z_iter!=z.end(); z_iter++)
+    {
+        Vector2d &z = *z_iter;
+        ceres::CostFunction *cost_function = TriangulationReprojectionErr::Create(z);
+
+        problem->AddResidualBlock(cost_function, loss_function,
+                                  poses[i].q.coeffs().data(),
+                                  poses[i].t.data(),
+                                  point3d.data());
+        problem->SetParameterization(poses[i].q.coeffs().data(),
+                                     quaternion_local_parameterization);
+
+        i++;
+    }
+
+    /*since we only optimize the 3d point in the word, so we need to set the q and t constant*/
+    for(VectorOfPose::iterator pose_iter = poses.begin(); pose_iter!=poses.end(); pose_iter++)
+    {
+        problem->SetParameterBlockConstant(pose_iter->q.coeffs().data());
+        problem->SetParameterBlockConstant(pose_iter->t.data());
+    }
+
+    /*optimize the point3d*/
+    ceres::Solver::Options options;
+    options.max_num_iterations = 100;
+    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, problem, &summary);
+
+    //std::cout << BOLDCYAN << summary.FullReport() << '\n';
+    return point3d;
+}
+
+
 void MSCKF::CalcResidualsAndStackingIt()
 {
+    for(int i = 0; i < mvLostFeatures.size(); i++)
+    {
+        /*the ith lost feature*/
 
+        vector<Vector2d> z_observation;
+        VectorOfPose poses;
+
+
+        /*num -> the num of observation of ith feature*/
+        int num = mvLostFeatures[i].cols();
+        for(int j = 0; j < num; j++)
+        {
+            /*this part we featch the 2d observation and the transition matrix
+             * z_observation -> the ith feature's 2d measurement
+             * poses -> Tcw which means world to camera
+             * aim-> optimize the world pose of ith feature
+             */
+
+            z_observation.push_back(Vector2d(mvLostFeatures[i].col(j)));
+            /*since the triangulation need the Tcw*/
+            /*but we only get the state from the mstate*/
+            Pose pose;
+            Quaterniond qwb = Quaterniond( mState.segment<4>(16 + 10*j));
+            Matrix3d Rwb = qwb.toRotationMatrix();
+            Vector3d twb = mState.segment<3>(16 + 10*j + 4);
+            Matrix4d Twb = Matrix4d::Identity();
+            Twb.block<3,3>(0,0) = Rwb;
+            Twb.block<3,1>(0,3) = twb;
+            Matrix4d Twc = Twb * Converter::toMatrix4d(mCAMParams.getTBS());
+            Matrix4d Tcw = Twc.inverse();
+            pose.q = Quaterniond(Tcw.block<3,3>(0,0));
+            pose.t = Tcw.block<3,1>(0,3);
+            poses.push_back(pose);
+
+        }
+
+        /*Triangulation Part*/
+        Vector3d point_i_3d = TriangulationWorldPoint(z_observation, poses);
+
+
+
+
+
+    }
 }
+
+
 
 
 

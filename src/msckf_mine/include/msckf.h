@@ -7,6 +7,9 @@
 #include "ORBmatcher.h"
 #include "frame.h"
 #include "types.h"
+#include "types.h"
+#include "triangulation.h"
+#include <ceres/ceres.h>
 
 
 using namespace std;
@@ -102,7 +105,11 @@ public:
     void AugmentNewFeatures();
     void ManageOldFeatures();
 
+    Vector3d TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose & poses);
+
     void CalcResidualsAndStackingIt();
+
+
 
 };
 

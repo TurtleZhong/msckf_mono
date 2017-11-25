@@ -46,8 +46,8 @@ include_directories("/usr/include/eigen3")
 #include_directories( ${Sophus_INCLUDE_DIRS} )
 
 # ceres
-# find_package(Ceres REQUIRED)
-# include_directories(${CERES_INCLUDE_DIRS})
+find_package(Ceres REQUIRED)
+include_directories(${CERES_INCLUDE_DIRS})
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
@@ -75,7 +75,7 @@ add_library(${PROJECT_NAME} SHARED
 target_link_libraries(${PROJECT_NAME}
 ${OpenCV_LIBS}
 ${EIGEN3_LIBS}
-# ${CERES_LIBRARIES}
+${CERES_LIBRARIES}
 )
 
 # Build

@@ -70,6 +70,14 @@ public:
     int minThFAST;
 };
 
+struct Pose {
+    Eigen::Quaterniond q;
+    Eigen::Vector3d t;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+typedef std::vector<Pose, Eigen::aligned_allocator<Pose> > VectorOfPose;
+
+
 }
 
 #endif // TYPES_H
