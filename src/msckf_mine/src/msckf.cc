@@ -480,7 +480,7 @@ void MSCKF::CalcResidualsAndStackingIt()
         /*Triangulation Part*/
         Vector3d point_i_3d = TriangulationWorldPoint(z_observation, poses);
 
-
+        /*cf.53 6.5.2 Error Representation Monocular Visual Inertial Odometry on a Mobile Device*/
 
 
 
