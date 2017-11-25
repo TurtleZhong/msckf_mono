@@ -109,6 +109,8 @@ public:
 
     void CalcResidualsAndStackingIt();
 
+    void CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi);
+
 
 
 };

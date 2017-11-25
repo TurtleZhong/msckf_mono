@@ -449,6 +449,7 @@ void MSCKF::CalcResidualsAndStackingIt()
         VectorOfPose poses;
 
 
+
         /*num -> the num of observation of ith feature*/
         int num = mvLostFeatures[i].cols();
         for(int j = 0; j < num; j++)
@@ -480,11 +481,74 @@ void MSCKF::CalcResidualsAndStackingIt()
         /*Triangulation Part*/
         Vector3d point_i_3d = TriangulationWorldPoint(z_observation, poses);
 
+
+
         /*cf.53 6.5.2 Error Representation Monocular Visual Inertial Odometry on a Mobile Device*/
 
+        Matrix<double, 2,9> Hbij;
+        MatrixXd Hxij = MatrixXd::Zero(2, 15+9*num);
+        Matrix<double, 2,3> Hfij;
+        Vector2d rij;
+        MatrixXd Hxi = MatrixXd::Zero(2*num, 15+9*num);
+        MatrixXd Hfi = MatrixXd::Zero(2*num, 3);
+        VectorXd ri;
+
+        for(int j = 0; j < num; j++)
+        {
+            /*compute the Hxi and Hfi
+             * Hxi = Hzjfi * Hfix
+             * Hzjfi is simple to calc since we konw pc = Tcw * pw
+             */
+
+            Matrix4d Tcw = Matrix4d::Identity();
+            Tcw.block<3,3>(0,0) = poses[j].q.toRotationMatrix();
+            Tcw.block<3,1>(0,3) = poses[j].t;
+
+            /*step2: calcHx and Hf*/
+            CalcHxAndHf(Tcw, point_i_3d, Hbij, Hfij);
 
 
+
+        }
+
+
+        /*after triangulation we need clear the buff*/
+        z_observation.clear();
+        poses.clear();
     }
+}
+
+void MSCKF::CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi)
+{
+    /*step1: translate the point_i_3d to the current j frame cj_p_fi*/
+    Matrix3d Rcw = Tcw.block<3,3>(0,0);
+    Vector3d tcw = Tcw.block<3,1>(0,3);
+    Vector3d pc = Rcw * pw + tcw;
+
+    Matrix<double,2,3> Jh = Matrix<double,2,3>::Zero();
+    double fx = mCAMParams.fx;
+    double fy = mCAMParams.fy;
+
+    Jh << fx/pc(2),        0,   (-1.0 * fx * pc(0))/(pc(2) * pc(2)),
+            0     , fy/pc(1),   (-1.0 * fy * pc(1))/(pc(2) * pc(2));
+    Matrix4d Tbc = Converter::toMatrix4d(mCAMParams.getTBS());
+    Matrix4d Tbw = Tbc * Tcw;
+    Matrix4d Twb = Tbw.inverse();
+    Matrix3d twb = Twb.block<3,3>(0,0);
+    Matrix3d Rbw = Tbw.block<3,3>(0,0);
+    Matrix3d Rcb = Tbc.block<3,3>(0,0).transpose();
+
+    /*step2 -> calc the Hfi*/
+    Hfi = Jh * Rcb * Rbw;    /* 2*3 */
+
+    /*step1 -> calc the Hxi*/
+    Matrix3d I3 = Matrix3d::Identity();
+    Matrix3d Z3 = Matrix3d::Zero();
+
+    MatrixXd Hfb;
+    Hfb << skewMatrix(pw - twb), -I3, Z3;
+    Hbi = Hfi * Hfb; /* 2 * 9 */
+
 }
 
 
