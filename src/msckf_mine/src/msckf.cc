@@ -400,7 +400,7 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
     /*build the optimization problem*/
     ceres::LossFunction* loss_function = new ceres::HuberLoss(1.0);
     ceres::LocalParameterization* quaternion_local_parameterization =
-            new EigenQuaternionParameterization;
+            new ceres::EigenQuaternionParameterization;
     unsigned int i = 0;
 
     Vector3d point3d(1.0,1.0,1.0); /*the initial guess*/
@@ -441,6 +441,14 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
 
 void MSCKF::CalcResidualsAndStackingIt()
 {
+    /*Ho and r is used for filter update step*/
+
+    vector<MatrixXd> vH;
+    vector<MatrixXd> vr;
+
+    /*Ho and r is used for filter update step*/
+
+
     for(int i = 0; i < mvLostFeatures.size(); i++)
     {
         /*the ith lost feature*/
@@ -492,6 +500,8 @@ void MSCKF::CalcResidualsAndStackingIt()
         MatrixXd Hxi = MatrixXd::Zero(2*num, 15+9*num);
         MatrixXd Hfi = MatrixXd::Zero(2*num, 3);
         VectorXd ri;
+        MatrixXd roi;
+        MatrixXd Hoi;
 
         for(int j = 0; j < num; j++)
         {
@@ -504,37 +514,79 @@ void MSCKF::CalcResidualsAndStackingIt()
             Tcw.block<3,3>(0,0) = poses[j].q.toRotationMatrix();
             Tcw.block<3,1>(0,3) = poses[j].t;
 
-            /*step2: calcHx and Hf*/
-            CalcHxAndHf(Tcw, point_i_3d, Hbij, Hfij);
+            /*step2: calcHx and Hf
+             * Hbij -->2*9  -->Hxij
+             * Hfij -->2*3  -->Hfi
+             */
+            Vector2d zij = z_observation[j];
+            CalcHxAndHf(Tcw, point_i_3d, Hbij, Hfij, zij, rij);
+
+            Hxij.block<2,9>(0, 15+9*j) = Hbij;
+            Hxi.block(2*j,0, 2,Hxi.cols()) = Hxij; /*very important*/
+            Hfi.block<2,3>(2*j,0) = Hfij;
+            ri.segment<2>(2*j) = rij;
+
 
 
 
         }
+
+        /*step3: nullspace to calc the H*/
+        MatrixXd Ai;
+        nullSpace(Hfi, Ai);
+        roi = Ai.transpose() * ri;
+        Hoi = Ai.transpose() * Hxi;
+
+        /* step4: Outiler Detection
+         * method: Chi-square test
+         */
+        if (ChiSquareTest(Hoi,roi,mCovariance))
+        {
+            /*inlier*/
+            /*keep the roi and Hoi into the vector*/
+            vH.push_back(Hoi);
+            vr.push_back(roi);
+        }
+
 
 
         /*after triangulation we need clear the buff*/
         z_observation.clear();
         poses.clear();
     }
+
+    /*after the lost features loop*/
+    /*update step is needed*/
+
+    MsckfUpdate(vH,vr);
+
+
+
 }
 
-void MSCKF::CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi)
+void MSCKF::CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi, Vector2d zij, Vector2d rij)
 {
     /*step1: translate the point_i_3d to the current j frame cj_p_fi*/
     Matrix3d Rcw = Tcw.block<3,3>(0,0);
     Vector3d tcw = Tcw.block<3,1>(0,3);
     Vector3d pc = Rcw * pw + tcw;
 
+
+
     Matrix<double,2,3> Jh = Matrix<double,2,3>::Zero();
     double fx = mCAMParams.fx;
     double fy = mCAMParams.fy;
+    double cx = mCAMParams.cx;
+    double cy = mCAMParams.cy;
+
+    Vector2d z_hat = Vector2d(cx + fx * pc(0) / pc(2), cy + fy * pc(1) / pc(2));
 
     Jh << fx/pc(2),        0,   (-1.0 * fx * pc(0))/(pc(2) * pc(2)),
             0     , fy/pc(1),   (-1.0 * fy * pc(1))/(pc(2) * pc(2));
     Matrix4d Tbc = Converter::toMatrix4d(mCAMParams.getTBS());
     Matrix4d Tbw = Tbc * Tcw;
     Matrix4d Twb = Tbw.inverse();
-    Matrix3d twb = Twb.block<3,3>(0,0);
+    Vector3d twb = Twb.block<3,1>(0,3);
     Matrix3d Rbw = Tbw.block<3,3>(0,0);
     Matrix3d Rcb = Tbc.block<3,3>(0,0).transpose();
 
@@ -545,14 +597,92 @@ void MSCKF::CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  
     Matrix3d I3 = Matrix3d::Identity();
     Matrix3d Z3 = Matrix3d::Zero();
 
-    MatrixXd Hfb;
-    Hfb << skewMatrix(pw - twb), -I3, Z3;
+    Matrix<double,3,9> Hfb;
+    Hfb.block<3,3>(0,0) = skewMatrix(pw - twb);
+    Hfb.block<3,3>(0,3) = -I3;
+    Hfb.block<3,3>(0,6) = Z3;
     Hbi = Hfi * Hfb; /* 2 * 9 */
+
+    /*step3 -> calc ri*/
+    rij = zij - z_hat;
+}
+
+
+void MSCKF::nullSpace(MatrixXd &H, MatrixXd &A)
+{
+    int n = H.rows() /2;
+
+    JacobiSVD<MatrixXd> svd(H, ComputeFullU);
+    A = svd.matrixU().rightCols(2*n-3).transpose();
+}
+
+bool MSCKF::ChiSquareTest(MatrixXd &Hoi, MatrixXd &roi, MatrixXd &covariance)
+{
+    int k = roi.rows(); /* k/2 ? */
+    MatrixXd gamma = roi * (Hoi * covariance * Hoi.transpose()).inverse() * roi.transpose();
+    if(gamma(0,0) < chi2Inv(k) ) /*gamma(0)*/
+        return true;
+    else
+        return false;
+}
+
+void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr)
+{
+    /*stack H and r*/
+    int vSize = vH.size();
+    int rowH,rowr,colH,colr;
+    rowH = rowr = colH = colr = 0;
+
+    colH = vH[0].cols();
+    colr = vr[0].cols();
+    vector<int> vRowH;
+    vector<int> vRowr;
+
+
+    for(int i = 0; i < vSize; i++)
+    {
+        rowH += vH[i].rows();
+        rowr += vr[i].rows();
+        vRowH.push_back(rowH);
+        vRowr.push_back(rowr);
+    }
+
+    MatrixXd H = MatrixXd::Zero(rowH, colH);
+    MatrixXd r = MatrixXd::Zero(rowr, colr);
+
+    int tmpRowH = 0;
+    int tmpRowr = 0;
+
+    for(int i = 0; i < vSize; i++)
+    {
+        H.block(tmpRowH, 0, vRowH[i], colH) = vH[i];
+        r.block(tmpRowr, 0, vRowr[i], colr) = vr[i];
+        tmpRowH += vH[i].rows();
+        tmpRowr += vH[i].rows();
+    }
+
+
+    /*for now we have get H and r
+     * r = Hx + n
+     */
+
+    /*we need QR decomposition*/
+    QRdecomposition(H, r);
+
+
+
+
+
+
 
 }
 
 
+void MSCKF::QRdecomposition(MatrixXd H0, MatrixXd r0)
+{
+    /*we need to QR*/
 
+}
 
 
 

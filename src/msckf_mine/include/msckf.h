@@ -9,6 +9,7 @@
 #include "types.h"
 #include "types.h"
 #include "triangulation.h"
+#include "chi2table.h"
 #include <ceres/ceres.h>
 
 
@@ -109,7 +110,12 @@ public:
 
     void CalcResidualsAndStackingIt();
 
-    void CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi);
+    void CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi, Vector2d zij, Vector2d rij);
+    void nullSpace(MatrixXd &H, MatrixXd &A);
+    bool ChiSquareTest(MatrixXd &Hoi, MatrixXd &roi, MatrixXd &covariance);
+
+    void MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr);
+    void QRdecomposition(MatrixXd H0, MatrixXd r0);
 
 
 

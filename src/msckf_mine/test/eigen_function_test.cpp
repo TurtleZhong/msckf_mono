@@ -39,6 +39,18 @@ int main(int argc, char *argv[])
     MatrixXd covariance = MatrixXd::Zero(15,15);
     cout << "--covariance size = " << covariance.size() << endl;
 
+    MatrixXf matA(2, 2);
+    matA << 1, 2, 3, 4;
+    MatrixXf matB = matA;
+
+
+    //matB << matA, matA/10, matA/10, matA;
+    matB.block(matB.rows(),0,2,2) = matA;
+
+
+
+    std::cout << matB << std::endl;
+
 
 
 
