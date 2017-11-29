@@ -667,20 +667,47 @@ void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr)
      */
 
     /*we need QR decomposition*/
-    QRdecomposition(H, r);
+    MatrixXd rq, TH;
+    QRdecomposition(H, r, rq, TH);
 
-
-
-
-
+    /*update step*/
+    Update(H,rq,TH);
 
 
 }
 
 
-void MSCKF::QRdecomposition(MatrixXd H0, MatrixXd r0)
+void MSCKF::QRdecomposition(MatrixXd H, MatrixXd r, MatrixXd &rq, MatrixXd &TH)
 {
-    /*we need to QR*/
+    /*we need to QR decomposition*/
+    HouseholderQR<MatrixXd> qr(H);
+    MatrixXd Q1;
+    Q1 = qr.householderQ() * (MatrixXd::Identity(H.rows(),H.cols()));
+    TH = qr.matrixQR().block(0,0,H.cols(),H.cols()).triangularView<Upper>();
+
+    rq = Q1.transpose() * r;
+    /*it seems that we need generate some new results*/
+
+}
+
+void MSCKF::Update(MatrixXd &H, MatrixXd &rq, MatrixXd &TH)
+{
+    int q = H.rows();
+    MatrixXd Rq = MatrixXd::Identity(q,q);
+    Rq = mCAMParams.sigma_img * mCAMParams.sigma_img * Rq;
+    MatrixXd I_belta = MatrixXd::Identity(q,q);
+
+    /*before update we need a check for row and col to ensure the mutiply*/
+    MatrixXd K = mCovariance * TH.transpose() *(TH * mCovariance * TH.transpose()).inverse();
+    mCovariance = (I_belta - K * TH) * mCovariance * (I_belta - K * TH).transpose() + K * Rq * K.transpose();
+    MatrixXd delta_x = K * rq;
+
+    /*update*/
+    Quaterniond Q(mState.segment<4>(0));
+    Quaterniond dq(0.5*delta_x(0), 0.5*delta_x(1), 0.5*delta_x(2), 1);
+    X.segment<4>(0) = (Q*dq).coeffs();
+    X.segment<3>(4) = delta_x.segment<3>(3);
+    X.segment<3>(7) = delta_x.segment<3>(6);
 
 }
 

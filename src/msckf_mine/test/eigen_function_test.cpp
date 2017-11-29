@@ -51,6 +51,21 @@ int main(int argc, char *argv[])
 
     std::cout << matB << std::endl;
 
+    Matrix<double,5,4> H;
+    H << 1, 3.3, 2.4, 1.1,
+        2.3,3.6, 1.37,2.35,
+        3.67,2.35,2.56,1.65,
+        0.23,2.34,9.1,5.1,
+        5.2,2.3,5.12,5.5;
+    cout << "H = \n" << H << endl;
+    HouseholderQR<MatrixXd> qr(H);
+    MatrixXd Q,R;
+    Q = qr.householderQ() * (MatrixXd::Identity(H.rows(),H.cols()));
+    R = qr.matrixQR().block(0,0,H.cols(),H.cols()).triangularView<Upper>();
+
+    cout << "Q = \n" << Q << "\nR = \n" << R << endl;
+
+    cout << "Q*R = \n" << Q * R << endl;
 
 
 
