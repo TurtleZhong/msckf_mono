@@ -141,6 +141,12 @@ map<int,int> Converter::swapMatchesId(const map<int, int> &matchesId)
     return matches;
 }
 
+Eigen::Vector4d Converter::toWxyz(Eigen::Vector4d &vec)
+{
+    Eigen::Vector4d v(vec(3), vec(0), vec(1), vec(2));
+    return v;
+}
+
 
 }
 

@@ -43,6 +43,8 @@ public:
 
 
     int MatcheTwoFrames(Frame &CurrentFrame, const Frame &LastFrame, const bool bMono);
+    cv::Mat DrawFrameMatch(Frame &mCurrentFrame, Frame &mLastFrame);
+
 
 public:
 

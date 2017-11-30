@@ -106,4 +106,7 @@ target_link_libraries(orb_feature_match_test ${PROJECT_NAME})
 add_executable(frame_and_orb_test test/frame_and_orb_test.cpp )
 target_link_libraries(frame_and_orb_test ${PROJECT_NAME})
 
+add_executable(msckf_test_v0 test/msckf_test_v0.cpp )
+target_link_libraries(msckf_test_v0 ${PROJECT_NAME})
+
 

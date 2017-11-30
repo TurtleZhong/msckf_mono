@@ -222,4 +222,91 @@ int ORBmatcher::DescriptorDistance(const cv::Mat &a, const cv::Mat &b)
     return dist;
 }
 
+cv::Mat ORBmatcher::DrawFrameMatch(Frame &mCurrentFrame, Frame &mLastFrame)
+{
+    cv::Mat imMatch = Mat::zeros(mCurrentFrame.mImageGray.rows*2,mCurrentFrame.mImageGray.cols,CV_8UC3);
+    vector<cv::KeyPoint> vCurrentKeys = mCurrentFrame.mvKeys;
+    vector<cv::KeyPoint> vLastKeys    = mLastFrame.mvKeys;
+    cv::Mat curr_Im, last_Im;
+
+
+
+    mCurrentFrame.mImageGray.copyTo(curr_Im);
+
+    mLastFrame.mImageGray.copyTo(last_Im);
+//    cout << "size = " << mLastFrame.mImageGray.rows << endl;
+
+//    cv::imshow("last", mLastFrame.mImageGray);
+    //cv::waitKey(0);
+    if(curr_Im.channels()<3) //this should be always true
+    {
+        cvtColor(curr_Im,curr_Im,CV_GRAY2BGR);
+
+    }
+
+    if(last_Im.channels()<3) //this should be always true
+    {
+        cvtColor(last_Im,last_Im,CV_GRAY2BGR);
+
+    }
+
+    /*matches*/
+    map<int,int> matches = mCurrentFrame.matchesId;
+    const float r = 5;
+
+    for(map<int,int>::iterator matches_iter = matches.begin(); matches_iter!=matches.end();matches_iter++)
+    {
+
+        int curr_id = matches_iter->first;
+        int last_id = matches_iter->second;
+        /*draw the current frame, the first value*/
+        cv::Point2f pt1,pt2,pt3,pt4;
+        pt1.x=vCurrentKeys[curr_id].pt.x-r;
+        pt1.y=vCurrentKeys[curr_id].pt.y-r;
+        pt2.x=vCurrentKeys[curr_id].pt.x+r;
+        pt2.y=vCurrentKeys[curr_id].pt.y+r;
+
+        pt3.x=vLastKeys[last_id].pt.x-r;
+        pt3.y=vLastKeys[last_id].pt.y-r;
+        pt4.x=vLastKeys[last_id].pt.x+r;
+        pt4.y=vLastKeys[last_id].pt.y+r;
+
+
+        //cv::rectangle(curr_Im,pt1,pt2,cv::Scalar(255,0,0));
+        cv::circle(curr_Im,vCurrentKeys[curr_id].pt,2,cv::Scalar(0,255,0),-1);
+
+        //cv::rectangle(last_Im,pt3,pt4,cv::Scalar(0,255,0));
+        cv::circle(last_Im,vLastKeys[last_id].pt,2,cv::Scalar(255,0,0),-1);
+
+
+    }
+
+
+
+    curr_Im.copyTo(imMatch(cv::Rect(0,0,curr_Im.cols,curr_Im.rows)));
+    last_Im.copyTo(imMatch(cv::Rect(0,curr_Im.rows,curr_Im.cols,curr_Im.rows)));
+    /*now we need to draw the lines*/
+
+    for(map<int,int>::iterator matches_iter = matches.begin(); matches_iter!=matches.end();matches_iter++)
+    {
+
+        int curr_id = matches_iter->first;
+        int last_id = matches_iter->second;
+        /*draw the current frame, the first value*/
+        cv::Point2f pt_curr,pt_last;
+
+        pt_curr = vCurrentKeys[curr_id].pt;
+        pt_last.x = vLastKeys[last_id].pt.x;
+        pt_last.y = vLastKeys[last_id].pt.y + curr_Im.rows;
+
+
+        cv::line(imMatch, pt_curr, pt_last, cv::Scalar(0,0,255),1,8);
+
+
+    }
+    return imMatch;
+}
+
+
+
 } //namespace ORB_SLAM

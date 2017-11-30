@@ -66,6 +66,10 @@ void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity
     /*Here we use the formulation in P.48 - P.52*/
     /*c.f. Monocular Visual Inertial Odometry on a Mobile Device*/
 
+//    cout << BOLDBLUE "In MSCKF::propagateIMU function:" << BOLDWHITE << endl;
+//    cout << "--acc = \n" << linear_acceleration << "\nw = \n" << angular_velocity << endl;
+
+
     Matrix3d d_R, pre_R;
     Vector3d s_hat, y_hat, tmp_vel, tmp_pos;
 
@@ -80,7 +84,14 @@ void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity
     Vector3d gyro_bias          = mState.segment(10,3);
     Vector3d acce_bias          = mState.segment(13,3);
 
+//    cout << "--spatial_quaternion = \n" << spatial_quaternion << endl;
+//    cout << "--spatial_position   = \n" << spatial_position << endl;
+//    cout << "--spatial_velocity   = \n" << spatial_velocity << endl;
+//    cout << "--gyro_bias          = \n" << gyro_bias        << endl;
+//    cout << "--acce_bias          = \n" << acce_bias        << endl;
+
     Quaterniond spa_q(spatial_quaternion);
+//    cout << "--spa_q = \n" << spa_q.coeffs()<< endl;
     Matrix3d spatial_rotation = spa_q.matrix();
 
     /*step2: get the measurement of actual acc and w*/
@@ -88,10 +99,17 @@ void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity
     Vector3d curr_w = angular_velocity - gyro_bias;
     Vector3d curr_a = linear_acceleration - acce_bias;
 
+//    cout << "--curr_w          = \n" << curr_w        << endl;
+//    cout << "--curr_a          = \n" << curr_a        << endl;
+
     /* step3: caculate the qB(l+1)B(l) or RB(l+1)B(l) which represents the rotation from Bl to B(l+1)
      * method: the fourth order Runge-Kutta
      */
     d_R = calcDeltaQuaternion(mGyroPrev, curr_w, mdt).matrix();
+
+//    cout << "--d_R          = \n" << d_R        << endl;
+//    cout << "--mdt          = \n" << mdt        << endl;
+
 
     /* step4: calculate s_hat and y_hat cf. P49*/
 
@@ -180,14 +198,20 @@ Matrix4d MSCKF::calcOmegaMatrix(const Vector3d &w)
 
 Quaterniond MSCKF::calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d curr_w, double &dt)
 {
+//    cout << "--imput values \n";
+
+
     Vector4d q0;
-    q0 << 0.0, 0,0, 0.0, 1.0;
+    q0 << 0.0, 0.0, 0.0, 1.0;
     Vector4d k1, k2, k3, k4, d_q;
+
 
     k1 = 0.5 * calcOmegaMatrix(mGyroPrev) * q0;
     k2 = 0.5 * calcOmegaMatrix((mGyroPrev + curr_w) / 2) * (q0 + 0.5 * k1 * dt);
     k3 = 0.5 * calcOmegaMatrix((mGyroPrev + curr_w) / 2) * (q0 + 0.5 * k2 * dt);
     k4 = 0.5 * calcOmegaMatrix(curr_w) * (q0 + k3 * dt);
+
+//    cout << "k1,k2,k3,k4" << k1 << endl << endl << k2 << "\n\n" << k3 << "\n\n" << k4 << endl;
 
     d_q = q0 + ( (k1 + 2*k2 + 2*k3 + k4) * dt ) / 6.0;
 
@@ -204,15 +228,20 @@ void MSCKF::Augmentation()
 
     /*step1: augmente the state vector*/
 
+
+
     int stateSize = mState.rows();
     mState.conservativeResize(stateSize + 10);
 
     mState.segment<10>(stateSize) = mState.head(10);
 
+
+
     /*step2: augmente the covariance
      * It should be noted that in step 1 we have add an image
      */
     int N = (mState.size() - 16) / 10; // N = number of image
+    cout << "in Augmentation: " << " N = " << N << endl;
 
     MatrixXd Jpi = MatrixXd::Zero(9, mState.size()-(N+1));
     MatrixXd I9 = MatrixXd::Identity(9,9);
@@ -296,7 +325,11 @@ void MSCKF::ConstructFrame(bool reset)
 
 void MSCKF::RunFeatureMatching()
 {
-    if(mvFeatures.size() < 50)
+
+    /*step 1: Construct the frame*/
+    this->ConstructFrame(mbReset);
+
+    if(mvFeatures.size() < 50 && mvFeatures.size() > 0)
     {
         /*it means that the number of tracked feature is too small */
         mvFeatures.clear();
@@ -309,8 +342,7 @@ void MSCKF::RunFeatureMatching()
     mvLostFeatureCamIdx.clear();
 
 
-    /*step 1: Construct the frame*/
-    this->ConstructFrame(mbReset);
+
 
     /*we need to know if the status is true or not */
     if(!mbReset)
@@ -321,6 +353,11 @@ void MSCKF::RunFeatureMatching()
 
         ORBmatcher orbMatcher(0.7);
         orbMatcher.MatcheTwoFrames(frame, feedframe, false); /*it is important to use the pior to make the robust match*/
+
+        cv::Mat imMatch = orbMatcher.DrawFrameMatch(frame,feedframe);
+        cv::imshow("matches", imMatch);
+        cv::waitKey(0);
+
 
         ManageOldFeatures();
 
@@ -391,6 +428,11 @@ void MSCKF::ManageOldFeatures()
 
 
     }
+
+    /*show the result*/
+
+
+
 }
 
 
@@ -441,6 +483,13 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
 
 void MSCKF::CalcResidualsAndStackingIt()
 {
+    /*TEST AND DEBUG*/
+
+    cout << "mvFeatures.size() = " << mvFeatures.size() << endl;
+    cout << "mvLostFeatures.size() = " << mvLostFeatures.size() << endl;
+
+
+
     /*Ho and r is used for filter update step*/
 
     vector<MatrixXd> vH;
@@ -486,8 +535,14 @@ void MSCKF::CalcResidualsAndStackingIt()
 
         }
 
+        cout << "data for Triangulation:" << endl;
+        cout << "poses.size() = " << poses.size() << endl << "z_observation.size() = " << z_observation.size() << endl;
+
+
         /*Triangulation Part*/
         Vector3d point_i_3d = TriangulationWorldPoint(z_observation, poses);
+
+        cin.get();
 
 
 
@@ -700,14 +755,28 @@ void MSCKF::Update(MatrixXd &H, MatrixXd &rq, MatrixXd &TH)
     /*before update we need a check for row and col to ensure the mutiply*/
     MatrixXd K = mCovariance * TH.transpose() *(TH * mCovariance * TH.transpose()).inverse();
     mCovariance = (I_belta - K * TH) * mCovariance * (I_belta - K * TH).transpose() + K * Rq * K.transpose();
-    MatrixXd delta_x = K * rq;
+    MatrixXd delta = K * rq;
+    VectorXd delta_x(delta);
 
     /*update*/
     Quaterniond Q(mState.segment<4>(0));
-    Quaterniond dq(0.5*delta_x(0), 0.5*delta_x(1), 0.5*delta_x(2), 1);
-    X.segment<4>(0) = (Q*dq).coeffs();
-    X.segment<3>(4) = delta_x.segment<3>(3);
-    X.segment<3>(7) = delta_x.segment<3>(6);
+    Quaterniond dq(1, 0.5*delta_x(0), 0.5*delta_x(1), 0.5*delta_x(2));
+    mState.segment<4>(0) = (Q*dq).normalized().coeffs();
+    mState.segment<3>(4) += delta_x.segment<3>(3);
+    mState.segment<3>(7) += delta_x.segment<3>(6);
+    mState.segment<3>(10) += delta_x.segment<3>(9);
+    mState.segment<3>(13) += delta_x.segment<3>(12);
+
+    /*for cameras*/
+    for(int i = 16; i < mState.size(); i+=10)
+    {
+        Quaterniond Q(mState.segment<4>(i));
+        Quaterniond dq(1,0.5*delta_x(i-1), 0.5*delta_x(i-1), 0.5*delta_x(i-1));
+        mState.segment<4>(i) = (Q * dq).normalized().coeffs();
+        mState.segment<3>(i+4) += delta_x.segment<3>(i+3);
+        mState.segment<3>(i+7) += delta_x.segment<3>(i+6);
+    }
+
 
 }
 

@@ -29,6 +29,8 @@ public:
     //static Sophus::SE3 toSE3(const cv::Mat &cvT);
     static cv::Mat toCvMat(const Eigen::Vector3d &m, int flag);
     static map<int,int> swapMatchesId(const map<int,int>& matchesId);
+    static Eigen::Vector4d toWxyz(Eigen::Vector4d &vec);
+
 
 };
 

@@ -28,6 +28,12 @@ int main(int argc, char *argv[])
 
     cout << "--state = \n" << state << endl;
 
+    MatrixXd s = MatrixXd::Zero(16,2);
+    s.block(0,0,16,1) = state;
+    cout << "s = \n" << s << endl;
+    VectorXd afters(s);
+    cout << "afters = " << afters << endl;
+
     int Xsize = state.rows();
     state.conservativeResize(Xsize + 10);
 
@@ -66,6 +72,9 @@ int main(int argc, char *argv[])
     cout << "Q = \n" << Q << "\nR = \n" << R << endl;
 
     cout << "Q*R = \n" << Q * R << endl;
+
+
+
 
 
 
