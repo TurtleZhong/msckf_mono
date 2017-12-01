@@ -53,6 +53,7 @@ include_directories(
 ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/include
 ${PROJECT_SOURCE_DIR}/test
+${PROJECT_SOURCE_DIR}/optical_flow_test
 ${EIGEN3_INCLUDE_DIR}
 )
 
