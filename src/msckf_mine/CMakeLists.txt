@@ -53,7 +53,7 @@ include_directories(
 ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/include
 ${PROJECT_SOURCE_DIR}/test
-${PROJECT_SOURCE_DIR}/optical_flow_test
+${PROJECT_SOURCE_DIR}/test/optical_flow_test
 ${EIGEN3_INCLUDE_DIR}
 )
 
@@ -109,5 +109,11 @@ target_link_libraries(frame_and_orb_test ${PROJECT_NAME})
 
 add_executable(msckf_test_v0 test/msckf_test_v0.cpp )
 target_link_libraries(msckf_test_v0 ${PROJECT_NAME})
+
+add_executable(optical_flow_tracking test/optical_flow_test/optical_flow_tracking.cpp )
+target_link_libraries(optical_flow_tracking ${PROJECT_NAME})
+
+add_executable(asl_dataset_to_mars test/asl_dataset_to_mars.cpp )
+target_link_libraries(asl_dataset_to_mars ${PROJECT_NAME})
 
 
