@@ -113,6 +113,9 @@ target_link_libraries(msckf_test_v0 ${PROJECT_NAME})
 add_executable(optical_flow_tracking test/optical_flow_test/optical_flow_tracking.cpp )
 target_link_libraries(optical_flow_tracking ${PROJECT_NAME})
 
+add_executable(optical_flow_tracking_frame2frame test/optical_flow_test/optical_flow_tracking_frame2frame.cpp )
+target_link_libraries(optical_flow_tracking_frame2frame ${PROJECT_NAME})
+
 add_executable(asl_dataset_to_mars test/asl_dataset_to_mars.cpp )
 target_link_libraries(asl_dataset_to_mars ${PROJECT_NAME})
 

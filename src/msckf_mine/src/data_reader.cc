@@ -9,6 +9,7 @@ DataReader::DataReader()
     cout << BOLDCYAN"---Load Imu and Camera data---";
     loadImu();
     loadCamera();
+    cout << BOLDCYAN"---Load Imu and Camera data Suscessfully!---";
     cout << BOLDWHITE << endl;
 }
 

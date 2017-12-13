@@ -7,7 +7,7 @@
 
 using namespace MSCKF_MINE;
 
-int flag = 1;
+int flag = 0;
 
 
 int main(int argc, char *argv[])
@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     vector<CAMERA> camera = data.mvCameraData;
     vector<IMU> imu = data.mvImuData;
     ofstream out_File, imu_File;
-    out_File.open("/home/m/DATASET/MAV0/image_data/right/timestamps.txt");
+    out_File.open("/home/m/DATASET/MAV0/img_data/right/timestamps.txt");
     imu_File.open("/home/m/DATASET/MAV0/imu_data.txt");
     int count = 0;
 
@@ -43,10 +43,11 @@ if(flag == 0)
         out_File << name << " " <<  time << endl;
 
         Mat image_png = imread(cam_iter->img_name, CV_LOAD_IMAGE_GRAYSCALE);
+        Mat out = image_png(Range(0,480),Range(0,640));
         vector<int> params;
         params.push_back(1);
 
-        imwrite("/home/m/DATASET/MAV0/image_data/right/" + name, image_png, params);
+        imwrite("/home/m/DATASET/MAV0/img_data/right/" + name, out, params);
         count++;
 
     }

@@ -23,25 +23,26 @@ int main(int argc, char *argv[])
     int blockSize = 10;
     bool useHarrisDetector = false;
     double k = 0.04;
+    bool flag = true;
 
-    Mat feedImage, currentImage;
+    Mat feedImage, currentImage, lastImage;
     bool needFeedImage = true;
     vector<Point2f> corners;
     vector<Point2f> corners_after;
+    vector<Point2f> corners_before;
 
     for(vector<CAMERA>::iterator iter_cam = vCamera.begin(); iter_cam!=vCamera.end(); iter_cam++)
     {
         Mat image = imread(iter_cam->img_name,CV_LOAD_IMAGE_GRAYSCALE);
 
-        /// Parameters for Shi-Tomasi algorithm
-
-
+        /*Extract the first frame!*/
 
         if(needFeedImage)
         {
             needFeedImage = false;
             corners.clear();
             feedImage = image;
+            lastImage = image;
             goodFeaturesToTrack( image,
                          corners,
                          maxCorners,
@@ -70,30 +71,46 @@ int main(int argc, char *argv[])
             vector<float> err;
             currentImage = image;
             corners_after.clear();
-            calcOpticalFlowPyrLK(feedImage,currentImage,corners,corners_after, status, err);
+            if(flag)
+            {
+                flag = false;
+                corners_before = corners;
+            }
+            cout << "--Tracking information:" << endl;
+            cout << "corners_before: " << corners_before.size() << endl;
+            calcOpticalFlowPyrLK(lastImage,currentImage,corners_before,corners_after, status, err);
+            lastImage = currentImage.clone();
+
             int j = 0;
             cvtColor(currentImage,currentImage,CV_GRAY2BGR);
 
-
+            vector<Point2f> corners_before_copy = corners_before;
+            corners_before.clear();
             for(int i=0;i<corners_after.size();i++)
             {
                 if(status[i]
-                        &&((abs(corners[i].x-corners_after[i].x)+abs(corners[i].y-corners_after[i].y))>2)
-                        &&((abs(corners[i].x-corners_after[i].x)+abs(corners[i].y-corners_after[i].y))<50))
+                        &&((abs(corners_before_copy[i].x-corners_after[i].x)+abs(corners_before_copy[i].y-corners_after[i].y))>=0)
+                        &&((abs(corners_before_copy[i].x-corners_after[i].x)+abs(corners_before_copy[i].y-corners_after[i].y))<50))
                 {
-//                    corners_after[j++] = corners_after[i];
+                    corners_before.push_back(corners_after[i]);
                     j++;
-                    cv::circle( currentImage, corners[i], 2, Scalar(0,255,0), -1, 8, 0 );
-                    cv::circle( currentImage, corners_after[i], 2, Scalar(0,0,255), -1, 8, 0 );
-                    cv::line(currentImage,corners[i],corners_after[i],Scalar(0,255,255),1,8,0);
+
+//                    cv::circle( currentImage, corners[i], 2, Scalar(0,255,0), -1, 8, 0 );
+                    cv::circle( currentImage, corners_after[i], 3, Scalar(0,0,255), -1, 8, 0 );
+//                    cv::line(currentImage,corners[i],corners_after[i],Scalar(0,255,255),1,8,0);
                 }
             }
             cv::imshow("Tracking", currentImage);
             cv::waitKey(27);
 
-            if(j < 150)
+            if(j < 100)
+            {
                 needFeedImage = true;
+                flag = true;
+            }
             cout << "** Run Here --> corners_after.size = " << j << endl;
+
+
 
         }
 

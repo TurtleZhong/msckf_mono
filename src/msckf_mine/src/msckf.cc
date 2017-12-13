@@ -497,7 +497,6 @@ void MSCKF::CalcResidualsAndStackingIt()
 
     /*Ho and r is used for filter update step*/
 
-
     for(int i = 0; i < mvLostFeatures.size(); i++)
     {
         /*the ith lost feature*/
