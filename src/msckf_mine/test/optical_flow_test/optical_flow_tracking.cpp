@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     vector<CAMERA> vCamera = data.mvCameraData;
     int maxCorners = 300;
     double qualityLevel = 0.01;
-    double minDistance = 10;
+    double minDistance = 20;
     int blockSize = 10;
     bool useHarrisDetector = false;
     double k = 0.04;

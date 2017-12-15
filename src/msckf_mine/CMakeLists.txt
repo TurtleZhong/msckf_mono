@@ -114,9 +114,12 @@ add_executable(optical_flow_tracking test/optical_flow_test/optical_flow_trackin
 target_link_libraries(optical_flow_tracking ${PROJECT_NAME})
 
 add_executable(optical_flow_tracking_frame2frame test/optical_flow_test/optical_flow_tracking_frame2frame.cpp )
-target_link_libraries(optical_flow_tracking_frame2frame ${PROJECT_NAME})
+target_link_libraries(optical_flow_tracking_frame2frame ${PROJECT_NAME}) 
 
 add_executable(asl_dataset_to_mars test/asl_dataset_to_mars.cpp )
 target_link_libraries(asl_dataset_to_mars ${PROJECT_NAME})
+
+add_executable(optical_flow_tracking_mask test/optical_flow_test/optical_flow_tracking_mask.cpp )
+target_link_libraries(optical_flow_tracking_mask ${PROJECT_NAME})
 
 
