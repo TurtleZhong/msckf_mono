@@ -78,6 +78,16 @@ struct Pose {
 typedef std::vector<Pose, Eigen::aligned_allocator<Pose> > VectorOfPose;
 
 
+//class Feature
+//{
+//public:
+//    unsigned long mnId; /*feature id*/
+//    cv::Point2f   muv;  /*the position in the image*/
+//};
+//typedef std::vector<Feature> FeatureList;
+
+
+
 }
 
 #endif // TYPES_H
