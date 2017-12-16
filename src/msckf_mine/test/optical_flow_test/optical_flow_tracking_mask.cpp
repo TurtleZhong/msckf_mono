@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     vector<CAMERA> vCamera = data.mvCameraData;
     unsigned int maxCorners = 300;
     double qualityLevel = 0.01;
-    double minDistance = 10;
+    double minDistance = 20;
     int blockSize = 10;
     bool useHarrisDetector = false;
     double k = 0.04;
@@ -71,15 +71,12 @@ int main(int argc, char *argv[])
                 cv::circle( currentImage, corners_after[i], 3, Scalar(0,0,255), -1, 8, 0 );
             }
         }
-//        cv::imshow("Tracking", currentImage);
-//        cv::waitKey(0);
 
         cout << "** Run Here --> corners_after.size = " << corners.size() << endl;
 
         /*add new corners since some features are lost*/
         /*step1:generate MASK and calc num to add*/
         Mat mask = image.clone();
-//        currentImage = image.clone();
         GenerateMask(mask,corners);
         int cornersNum = maxCorners - corners.size();
         cout << "corners.size = " << corners.size() << endl;
@@ -108,7 +105,6 @@ int main(int argc, char *argv[])
         /// Draw corners detected
         cout<<"** Number of corners new added : "<<corners_new.size()<<endl;
         cout<<"** Number of corners detected: "<<corners.size()<<endl;
-        //cvtColor(image,image,CV_GRAY2BGR);
         int r = 3;
         for( int i = 0; i < corners_new.size(); i++ )
         { circle( currentImage, corners_new[i], r, Scalar(0,255,0), -1, 8, 0 ); }
@@ -120,10 +116,8 @@ int main(int argc, char *argv[])
 
         cv::cornerSubPix(image, corners, cv::Size(5, 5), cv::Size(-1, -1), criteria);
         //cout << "corners = \n" << corners << endl;
-
-
         cv::imshow("Tracking-New", currentImage);
-        cv::waitKey(1);
+        cv::waitKey(0);
 
     }
 
