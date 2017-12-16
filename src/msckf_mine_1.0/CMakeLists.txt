@@ -119,4 +119,7 @@ target_link_libraries(asl_dataset_to_mars ${PROJECT_NAME})
 add_executable(optical_flow_tracking_mask test/optical_flow_test/optical_flow_tracking_mask.cpp )
 target_link_libraries(optical_flow_tracking_mask ${PROJECT_NAME})
 
+add_executable(tracking_feature_manager test/optical_flow_test/tracking_feature_manager.cpp )
+target_link_libraries(tracking_feature_manager ${PROJECT_NAME})
+
 
