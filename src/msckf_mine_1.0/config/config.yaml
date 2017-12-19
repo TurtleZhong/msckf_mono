@@ -31,6 +31,20 @@ accelerometer_random_walk: 3.0000e-3    # [ m / s^3 / sqrt(Hz) ].  ( accel bias 
 g: 9.81
 
 #--------------------------------------------------------------------------------------------
+# goodFeaturesToTrack Params
+#--------------------------------------------------------------------------------------------
+
+Shi-Tomasi.maxCorners: 300
+Shi-Tomasi.qualityLevel: 0.01
+Shi-Tomasi.minDistance: 20
+Shi-Tomasi.blockSize: 10
+Shi-Tomasi.useHarrisDetector: false
+Shi-Tomasi.k: 0.04
+
+
+
+
+#--------------------------------------------------------------------------------------------
 # ORB Parameters
 #--------------------------------------------------------------------------------------------
 

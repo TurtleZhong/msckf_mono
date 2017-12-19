@@ -6,7 +6,7 @@ namespace MSCKF_MINE
 
 DataReader::DataReader()
 {
-    cout << BOLDCYAN"---Load Imu and Camera data---";
+    cout << BOLDCYAN"---Load Imu and Camera data---\n";
     loadImu();
     loadCamera();
     cout << BOLDCYAN"---Load Imu and Camera data Suscessfully!---";

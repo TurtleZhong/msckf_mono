@@ -3,13 +3,11 @@
 #include "common_include.h"
 #include "converter.h"
 #include "camera.h"
-#include "ORBextractor.h"
-#include "ORBmatcher.h"
-#include "frame.h"
-#include "types.h"
 #include "types.h"
 #include "triangulation.h"
 #include "chi2table.h"
+#include "frame.h"
+#include "feature.h"
 #include <ceres/ceres.h>
 
 
@@ -66,29 +64,37 @@ public:
 
     /*Feature part and update step*/
 
-    /*ORB Feature Parts*/
-    ORB_PARAM orbParam;
-    ORBextractor* mpORBextractor;
+    /*Feature Parts*/
     Mat mImage; /*it should be noted that the image was undistorted in function unDistorImage()*/
     double mTimeStamp;
+    unsigned int mnFeatureId;
 
     void imageComing(const cv::Mat &image, const double timestamp);
 
     std::vector<cv::KeyPoint> mvKeys;
-    cv::Mat mDescriptors;
 
     void unDistortImage();
-    void extractFeatures();
 
-    Frame frame;
-    Frame feedframe;
-    bool mbReset;  /*only use in the first frame and the filter is reseted*/
+    Frame mCurrFrame;
+    Frame mLastFrame;
+    VectorOfFeatures mvFeatureContainer;
+    bool mbReset;                   /*only use in the first frame and the filter is reseted*/
 
 
+    /*Tracking Part*/
+    void Tracking();
+    void CornersToFeatures(Frame &frame);
+
+
+
+
+
+
+    /*Old Functions*/
     void ConstructFrame(const Mat &im, const double &timeStamp); /*for test*/
     void ConstructFrame(bool reset = false);
-
     void RunFeatureMatching();
+    /*Old Functions*/
 
 
 
@@ -99,7 +105,7 @@ public:
      */
     /*Feature Mannager Parts*/
     vector<Eigen::MatrixXd> mvFeatures;
-    vector<Eigen::Vector2i> mvFeaturesIdx;      /* i , imageNum*/
+    vector<Eigen::Vector2i> mvFeaturesIdx;        /* i , imageNum*/
     vector<Eigen::MatrixXd> mvLostFeatures;
     vector<int>             mvLostFeatureCamIdx;
 
@@ -117,8 +123,6 @@ public:
     void MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr);
     void QRdecomposition(MatrixXd H, MatrixXd r, MatrixXd &rq, MatrixXd &TH);
     void Update(MatrixXd &H,MatrixXd &rq, MatrixXd &TH);
-
-
 
 };
 
