@@ -89,12 +89,14 @@ int main(int argc, char *argv[])
         cout << "L-K -- > Corners_after: " << corners_after.size() << endl;
         cout << "L-K -- > Status_after: "  << status.size()        << endl;
         vector<int> vDelete;
+        vector<int> vLongTrackedFeaturesIndex;
         for(int i=0;i<corners_after.size();i++)
         {
 
             if(status[i]
                     &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))>=0)
-                    &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))<30))
+                    &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))<30)
+                    &&corners_after[i].x > 0 && corners_after[i].x < 752 && corners_after[i].y > 0 && corners_after[i].y < 480)
             {
                 corners.push_back(corners_after[i]);
                 j++;
@@ -104,13 +106,14 @@ int main(int argc, char *argv[])
 
                 /*we need add the observation*/
                 vFeatures[i].mvObservation.push_back(Vector2d(corners_after[i].x,corners_after[i].y));
-//                if(vFeatures[i].mvObservation.size() > 20)
-//                {
-//                    /*delete that feature or use it to update the filter*/
-//                    //vFeatures.erase(vFeatures.begin()+i);
-//                    vDelete.push_back(i);
-//                    corners.erase(corners.begin()+i );
-//                }
+                if(vFeatures[i].mvObservation.size() > 15)
+                {
+                    /*delete that feature or use it to update the filter*/
+                    //vFeatures.erase(vFeatures.begin()+i);
+                    vDelete.push_back(i);
+                    vLongTrackedFeaturesIndex.push_back(i);
+                    //corners.erase(corners.begin()+i );
+                }
 
 
             }
@@ -125,17 +128,28 @@ int main(int argc, char *argv[])
         }
 
         /*delete the untracked or more than 20 times observed points*/
+        sort(vDelete.begin(),vDelete.end());
+        sort(vLongTrackedFeaturesIndex.begin(),vLongTrackedFeaturesIndex.end());
         for(int i = vDelete.size() -1; i >=0 ; i--)
         {
             vFeatures.erase(vFeatures.begin()+vDelete[i]);
         }
+        /*corners also should be deleted*/
+        for(int i = vLongTrackedFeaturesIndex.size() -1; i >=0 ; i--)
+        {
+            corners.erase(corners.begin() + vLongTrackedFeaturesIndex[i]);
+        }
+
+        /*For this time we lost how many features*/
+
+        cout << "We lost " << vDelete.size() << " features." << endl;
 
 
         /*for test we track 15th feature*/
         cout << "Information of 15th feature" << endl;
-        cout << "Feature ID: " << vFeatures[15].mnId << endl;
-        cout <<BOLDGREEN << "Frame ID:"    << vFeatures[15].mnFrameId <<WHITE <<  endl;
-        Feature &feature = vFeatures[15];
+        cout << "Feature ID: " << vFeatures[14].mnId << endl;
+        cout <<BOLDGREEN << "Frame ID:"    << vFeatures[14].mnFrameId <<WHITE <<  endl;
+        Feature &feature = vFeatures[14];
         for(int i = 0; i < feature.mvObservation.size(); i++)
         {
             cout << "The " << i << "th observation\n" <<feature.mvObservation[i] << endl;
