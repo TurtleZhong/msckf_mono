@@ -44,12 +44,17 @@ int main(int argc, char *argv[])
 
 Mat ShowFeatures(Frame &frame)
 {
-    vector<Point2f> &corners = frame.mvCorners;
+    vector<Point2f> &oldcorners = frame.mvOldCorners;
+    vector<Point2f> &newcorners = frame.mvNewCorners;
     Mat image = frame.mImgGray;
     cvtColor(image,image,CV_GRAY2BGR);
-    for(int i = 0; i < corners.size(); i++)
+    for(int i = 0; i < oldcorners.size(); i++)
     {
-        cv::circle( image, corners[i], 3, Scalar(0,0,255), -1, 8, 0 );
+        cv::circle( image, oldcorners[i], 3, Scalar(0,0,255), -1, 8, 0 );
+    }
+    for(int i = 0; i < newcorners.size(); i++)
+    {
+        cv::circle( image, newcorners[i], 3, Scalar(0,255,0), -1, 8, 0 );
     }
     return image;
 }

@@ -11,6 +11,7 @@ MSCKF::MSCKF()
 {
     mbReset = true;
     mnFeatureId = 0;
+    mnMaxLifeTime = Config::get<int>("Shi-Tomasi.maxLifeTime");
 }
 
 MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, const Vector3d &Gyro, double &dt)
@@ -26,6 +27,7 @@ MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, cons
     mGravity = Vector3d(0.0, 0.0, Config::get<double>("g"));
     mnFeatureId = 0;
     mbReset = true;
+    Config::get<int>("Shi-Tomasi.maxLifeTime");
 
 }
 
@@ -64,8 +66,8 @@ void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity
     /*Here we use the formulation in P.48 - P.52*/
     /*c.f. Monocular Visual Inertial Odometry on a Mobile Device*/
 
-//    cout << BOLDBLUE "In MSCKF::propagateIMU function:" << BOLDWHITE << endl;
-//    cout << "--acc = \n" << linear_acceleration << "\nw = \n" << angular_velocity << endl;
+    //    cout << BOLDBLUE "In MSCKF::propagateIMU function:" << BOLDWHITE << endl;
+    //    cout << "--acc = \n" << linear_acceleration << "\nw = \n" << angular_velocity << endl;
 
 
     Matrix3d d_R, pre_R;
@@ -82,14 +84,14 @@ void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity
     Vector3d gyro_bias          = mState.segment(10,3);
     Vector3d acce_bias          = mState.segment(13,3);
 
-//    cout << "--spatial_quaternion = \n" << spatial_quaternion << endl;
-//    cout << "--spatial_position   = \n" << spatial_position << endl;
-//    cout << "--spatial_velocity   = \n" << spatial_velocity << endl;
-//    cout << "--gyro_bias          = \n" << gyro_bias        << endl;
-//    cout << "--acce_bias          = \n" << acce_bias        << endl;
+    //    cout << "--spatial_quaternion = \n" << spatial_quaternion << endl;
+    //    cout << "--spatial_position   = \n" << spatial_position << endl;
+    //    cout << "--spatial_velocity   = \n" << spatial_velocity << endl;
+    //    cout << "--gyro_bias          = \n" << gyro_bias        << endl;
+    //    cout << "--acce_bias          = \n" << acce_bias        << endl;
 
     Quaterniond spa_q(spatial_quaternion);
-//    cout << "--spa_q = \n" << spa_q.coeffs()<< endl;
+    //    cout << "--spa_q = \n" << spa_q.coeffs()<< endl;
     Matrix3d spatial_rotation = spa_q.matrix();
 
     /*step2: get the measurement of actual acc and w*/
@@ -97,16 +99,16 @@ void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity
     Vector3d curr_w = angular_velocity - gyro_bias;
     Vector3d curr_a = linear_acceleration - acce_bias;
 
-//    cout << "--curr_w          = \n" << curr_w        << endl;
-//    cout << "--curr_a          = \n" << curr_a        << endl;
+    //    cout << "--curr_w          = \n" << curr_w        << endl;
+    //    cout << "--curr_a          = \n" << curr_a        << endl;
 
     /* step3: caculate the qB(l+1)B(l) or RB(l+1)B(l) which represents the rotation from Bl to B(l+1)
      * method: the fourth order Runge-Kutta
      */
     d_R = calcDeltaQuaternion(mGyroPrev, curr_w, mdt).matrix();
 
-//    cout << "--d_R          = \n" << d_R        << endl;
-//    cout << "--mdt          = \n" << mdt        << endl;
+    //    cout << "--d_R          = \n" << d_R        << endl;
+    //    cout << "--mdt          = \n" << mdt        << endl;
 
 
     /* step4: calculate s_hat and y_hat cf. P49*/
@@ -196,7 +198,7 @@ Matrix4d MSCKF::calcOmegaMatrix(const Vector3d &w)
 
 Quaterniond MSCKF::calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d curr_w, double &dt)
 {
-//    cout << "--imput values \n";
+    //    cout << "--imput values \n";
 
 
     Vector4d q0;
@@ -209,7 +211,7 @@ Quaterniond MSCKF::calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d
     k3 = 0.5 * calcOmegaMatrix((mGyroPrev + curr_w) / 2) * (q0 + 0.5 * k2 * dt);
     k4 = 0.5 * calcOmegaMatrix(curr_w) * (q0 + k3 * dt);
 
-//    cout << "k1,k2,k3,k4" << k1 << endl << endl << k2 << "\n\n" << k3 << "\n\n" << k4 << endl;
+    //    cout << "k1,k2,k3,k4" << k1 << endl << endl << k2 << "\n\n" << k3 << "\n\n" << k4 << endl;
 
     d_q = q0 + ( (k1 + 2*k2 + 2*k3 + k4) * dt ) / 6.0;
 
@@ -277,28 +279,114 @@ void MSCKF::imageComing(const Mat &image, const double timestamp)
         mbReset = false;
         /*the first frame, we need to initial the features*/
         int cornersNum = Config::get<int>("Shi-Tomasi.maxCorners");
-        mCurrFrame = Frame(image, timestamp, cornersNum , cv::Mat());
+        mCurrFrame = Frame(mImage, timestamp, cornersNum , cv::Mat());
         mLastFrame = Frame(mCurrFrame);
         CornersToFeatures(mLastFrame);
+        mvCorners = mCurrFrame.mvCorners;
     }
     else
     {
         /*if the image is not the first frame, we can tracking*/
         Tracking();
+
     }
 
 }
 
 void MSCKF::Tracking()
 {
-    cout << "Tracking Part!!" << endl;
+    cout << BOLDCYAN << "--Tracking Part--" << WHITE << endl;
     /*optical flow*/
+    cout << BOLDCYAN << "--L-K Tracking--" << WHITE << endl;
+
+    OpticalFlowTracking();
+    mLastFrame = Frame(mCurrFrame);
+
+}
+
+
+void MSCKF::OpticalFlowTracking()
+{
+    vector<uchar> status;
+    vector<float> err;
+    Mat lastImage    = mLastFrame.mImgGray.clone();
+    Mat currentImage = mImage.clone();
+    vector<Point2f> corners_after;
+//    corners_after.clear();
+    calcOpticalFlowPyrLK(lastImage,currentImage,mvCorners,corners_after, status, err);
+
+    vector<int> vDeleteIndex;
+    vector<int> vLongTrackedFeaturesIndex;
+
+    vector<Point2f> corners_before = mvCorners;
+    mvCorners.clear();
+    for(int i=0;i<corners_after.size();i++)
+    {
+
+        if(status[i]
+                &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))>=0)
+                &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))<30)
+                &&corners_after[i].x > 0. && corners_after[i].x < 752. && corners_after[i].y > 0. && corners_after[i].y < 480.)
+        {
+            mvCorners.push_back(corners_after[i]);
+            //cv::circle( currentImage, corners_after[i], 3, Scalar(0,0,255), -1, 8, 0 );
+            /*we need add the observation to the container*/
+            mvFeatureContainer[i].mvObservation.push_back(Vector2d(corners_after[i].x,corners_after[i].y));
+            if(mvFeatureContainer[i].mvObservation.size() > mnMaxLifeTime)
+            {
+                /*delete that feature or use it to update the filter*/
+                vDeleteIndex.push_back(i);
+                vLongTrackedFeaturesIndex.push_back(i);
+            }
+
+
+        }
+        else
+        {
+            /*features that are not tracked, we need to delate it, but we should delete later*/
+            vDeleteIndex.push_back(i);
+
+        }
+
+    }
+
+    /*delete the untracked or more than 20 times observed points*/
+    sort(vDeleteIndex.begin(),vDeleteIndex.end());
+    sort(vLongTrackedFeaturesIndex.begin(),vLongTrackedFeaturesIndex.end());
+    for(int i = vDeleteIndex.size() -1; i >=0 ; i--)
+    {
+        mvFeatureContainer.erase(mvFeatureContainer.begin()+vDeleteIndex[i]);
+    }
+    /*corners also should be deleted*/
+    for(int i = vLongTrackedFeaturesIndex.size() -1; i >=0 ; i--)
+    {
+        mvCorners.erase(mvCorners.begin() + vLongTrackedFeaturesIndex[i]);
+    }
+
+    Mat mask = mImage.clone();
+    mLastFrame.GenerateMask(mask, mvCorners);
+    int cornesNum = mLastFrame.mnMaxCorners - mvCorners.size();
+    cout << BOLDCYAN"After tracking, we need add " << cornesNum << " new features!" << WHITE <<  endl;
+    if(cornesNum > 20)
+    {
+        mCurrFrame = Frame(mImage, mTimeStamp, cornesNum, mask, mvCorners);
+        /*corners Num > 20 means we extract new features*/
+        CornersToFeatures(mCurrFrame);
+        mvCorners.insert(mvCorners.end(), mCurrFrame.mvNewCorners.begin(), mCurrFrame.mvNewCorners.end());
+
+    }
+    else
+    {
+        mCurrFrame = Frame(mImage, mTimeStamp, -1, mask, mvCorners);
+    }
+
+
 
 }
 
 void MSCKF::CornersToFeatures(Frame &frame)
 {
-    vector<Point2f> &corners = frame.mvCorners;
+    vector<Point2f> &corners = frame.mvNewCorners;
     for(int i = 0; i < corners.size(); i++)
     {
         Feature feature;
@@ -313,6 +401,8 @@ void MSCKF::CornersToFeatures(Frame &frame)
 
 
 
+
+
 void MSCKF::unDistortImage()
 {
     cv::Mat tmp = mImage.clone();
@@ -323,78 +413,78 @@ void MSCKF::unDistortImage()
 void MSCKF::ConstructFrame(const Mat &im, const double &timeStamp)
 {
 
-//    frame = Frame(im, timeStamp, mpORBextractor);
-//    mImage = im.clone();
+    //    frame = Frame(im, timeStamp, mpORBextractor);
+    //    mImage = im.clone();
 }
 
 void MSCKF::ConstructFrame(bool reset)
 {
-//    if(!reset)
-//    {
-//        mpORBextractor->setFeatureNum(Config::get<int>("ORBextractor.nFeaturesInit"));
-//        frame = Frame(mImage, mTimeStamp, mpORBextractor);
-//    }
+    //    if(!reset)
+    //    {
+    //        mpORBextractor->setFeatureNum(Config::get<int>("ORBextractor.nFeaturesInit"));
+    //        frame = Frame(mImage, mTimeStamp, mpORBextractor);
+    //    }
 
-//    else
-//    {
-//        mpORBextractor->setFeatureNum(Config::get<int>("ORBextractor.nFeatures"));
-//        frame = Frame(mImage, mTimeStamp, mpORBextractor);
-//    }
+    //    else
+    //    {
+    //        mpORBextractor->setFeatureNum(Config::get<int>("ORBextractor.nFeatures"));
+    //        frame = Frame(mImage, mTimeStamp, mpORBextractor);
+    //    }
 }
 
 
 void MSCKF::RunFeatureMatching()
 {
 
-//    /*step 1: Construct the frame*/
-//    this->ConstructFrame(mbReset);
+    //    /*step 1: Construct the frame*/
+    //    this->ConstructFrame(mbReset);
 
-//    if(mvFeatures.size() < 50 && mvFeatures.size() > 0)
-//    {
-//        /*it means that the number of tracked feature is too small */
-//        mvFeatures.clear();
-//        mvFeaturesIdx.clear();
-//        Marginalizefilter();
-//        mbReset = true;         /*which means we need to rest the filter*/
-//    }
+    //    if(mvFeatures.size() < 50 && mvFeatures.size() > 0)
+    //    {
+    //        /*it means that the number of tracked feature is too small */
+    //        mvFeatures.clear();
+    //        mvFeaturesIdx.clear();
+    //        Marginalizefilter();
+    //        mbReset = true;         /*which means we need to rest the filter*/
+    //    }
 
-//    mvLostFeatures.clear();
-//    mvLostFeatureCamIdx.clear();
-
-
+    //    mvLostFeatures.clear();
+    //    mvLostFeatureCamIdx.clear();
 
 
-//    /*we need to know if the status is true or not */
-//    if(!mbReset)
-//    {
-//        /*in this case, the last frame is not empty so we can run the feature matching*/
-//        /*the most inportment part is frame.matchesID
-//         */
-
-//        ORBmatcher orbMatcher(0.7);
-//        orbMatcher.MatcheTwoFrames(frame, feedframe, false); /*it is important to use the pior to make the robust match*/
-
-//        cv::Mat imMatch = orbMatcher.DrawFrameMatch(frame,feedframe);
-//        cv::imshow("matches", imMatch);
-//        cv::waitKey(0);
 
 
-//        ManageOldFeatures();
+    //    /*we need to know if the status is true or not */
+    //    if(!mbReset)
+    //    {
+    //        /*in this case, the last frame is not empty so we can run the feature matching*/
+    //        /*the most inportment part is frame.matchesID
+    //         */
 
-//    }
-//    else
-//    {
-//        /* since the mbReset is true, there are two cases
-//         * case1: the first frame
-//         * case2: the mvFeatures.size() < 50 which means the tracked features is two small
-//         */
-//        feedframe = Frame(frame);
+    //        ORBmatcher orbMatcher(0.7);
+    //        orbMatcher.MatcheTwoFrames(frame, feedframe, false); /*it is important to use the pior to make the robust match*/
 
-//        /*step 2: AugmentNewFeatures*/
+    //        cv::Mat imMatch = orbMatcher.DrawFrameMatch(frame,feedframe);
+    //        cv::imshow("matches", imMatch);
+    //        cv::waitKey(0);
 
-//        AugmentNewFeatures();
-//        mbReset = false;
-//    }
+
+    //        ManageOldFeatures();
+
+    //    }
+    //    else
+    //    {
+    //        /* since the mbReset is true, there are two cases
+    //         * case1: the first frame
+    //         * case2: the mvFeatures.size() < 50 which means the tracked features is two small
+    //         */
+    //        feedframe = Frame(frame);
+
+    //        /*step 2: AugmentNewFeatures*/
+
+    //        AugmentNewFeatures();
+    //        mbReset = false;
+    //    }
 }
 
 /**
@@ -402,52 +492,52 @@ void MSCKF::RunFeatureMatching()
  */
 void MSCKF::AugmentNewFeatures()
 {
-//    mvFeatures    = vector<MatrixXd>(frame.mvKeys.size(), MatrixXd::Zero(2,1));
-//    mvFeaturesIdx = vector<Vector2i>(frame.mvKeys.size(), Vector2i::Zero());
+    //    mvFeatures    = vector<MatrixXd>(frame.mvKeys.size(), MatrixXd::Zero(2,1));
+    //    mvFeaturesIdx = vector<Vector2i>(frame.mvKeys.size(), Vector2i::Zero());
 
-//    /*since the filter is reseted, we need add all the features to the feature manager vector*/
+    //    /*since the filter is reseted, we need add all the features to the feature manager vector*/
 
-//    for(int i = 0; i < frame.mvKeys.size(); i++)
-//    {
-//        mvFeatures[i](0,0) = frame.mvKeys[i].pt.x;
-//        mvFeatures[i](1,0) = frame.mvKeys[i].pt.y;
-//        mvFeaturesIdx[i]   = Vector2i(i, int(frame.mnId));
-//    }
+    //    for(int i = 0; i < frame.mvKeys.size(); i++)
+    //    {
+    //        mvFeatures[i](0,0) = frame.mvKeys[i].pt.x;
+    //        mvFeatures[i](1,0) = frame.mvKeys[i].pt.y;
+    //        mvFeaturesIdx[i]   = Vector2i(i, int(frame.mnId));
+    //    }
 }
 
 void MSCKF::ManageOldFeatures()
 {
-//    map<int,int> matches = Converter::swapMatchesId(frame.matchesId);
-//    map<int,int>::iterator matches_iter;
+    //    map<int,int> matches = Converter::swapMatchesId(frame.matchesId);
+    //    map<int,int>::iterator matches_iter;
 
-//    for(int j = 0; j < mvFeaturesIdx.size(); j++)
-//    {
-//        int feedId = mvFeaturesIdx[j](0); /*key*/
-//        matches_iter = matches.find(feedId);
-//        if(matches_iter!=matches.end())
-//        {
-//            /*feature were tracked!*/
-//            int M = mvFeatures[j].rows();
-//            int N = mvFeatures[j].cols();
-//            mvFeatures[j].conservativeResize(M,N+1);
-//            mvFeatures[j](0,N) = frame.mvKeys[matches_iter->second].pt.x;
-//            mvFeatures[j](1,N) = frame.mvKeys[matches_iter->second].pt.y;
+    //    for(int j = 0; j < mvFeaturesIdx.size(); j++)
+    //    {
+    //        int feedId = mvFeaturesIdx[j](0); /*key*/
+    //        matches_iter = matches.find(feedId);
+    //        if(matches_iter!=matches.end())
+    //        {
+    //            /*feature were tracked!*/
+    //            int M = mvFeatures[j].rows();
+    //            int N = mvFeatures[j].cols();
+    //            mvFeatures[j].conservativeResize(M,N+1);
+    //            mvFeatures[j](0,N) = frame.mvKeys[matches_iter->second].pt.x;
+    //            mvFeatures[j](1,N) = frame.mvKeys[matches_iter->second].pt.y;
 
-//        }
-//        else
-//        {
-//            /*feature were not tracked, we need remove it and augment the lostfeatures*/
-//            mvLostFeatures.push_back(mvFeatures[j]);
+    //        }
+    //        else
+    //        {
+    //            /*feature were not tracked, we need remove it and augment the lostfeatures*/
+    //            mvLostFeatures.push_back(mvFeatures[j]);
 
-//            mvLostFeatureCamIdx.push_back(mvFeaturesIdx[j](1));
+    //            mvLostFeatureCamIdx.push_back(mvFeaturesIdx[j](1));
 
-//            mvFeatures.erase(mvFeatures.begin() + j);
-//            mvFeaturesIdx.erase(mvFeaturesIdx.begin() + j);
+    //            mvFeatures.erase(mvFeatures.begin() + j);
+    //            mvFeaturesIdx.erase(mvFeaturesIdx.begin() + j);
 
-//        }
+    //        }
 
 
-//    }
+    //    }
 
     /*show the result*/
 

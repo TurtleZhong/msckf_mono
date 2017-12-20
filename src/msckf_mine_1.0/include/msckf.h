@@ -71,18 +71,19 @@ public:
 
     void imageComing(const cv::Mat &image, const double timestamp);
 
-    std::vector<cv::KeyPoint> mvKeys;
-
     void unDistortImage();
 
     Frame mCurrFrame;
     Frame mLastFrame;
     VectorOfFeatures mvFeatureContainer;
-    bool mbReset;                   /*only use in the first frame and the filter is reseted*/
+    vector<Point2f>  mvCorners;             /*only keep the exist corners*/
+    bool mbReset;                           /*only use in the first frame and the filter is reseted*/
+    unsigned int mnMaxLifeTime;
 
 
     /*Tracking Part*/
     void Tracking();
+    void OpticalFlowTracking();
     void CornersToFeatures(Frame &frame);
 
 

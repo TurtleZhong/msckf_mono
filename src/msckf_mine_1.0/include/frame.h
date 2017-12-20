@@ -17,6 +17,7 @@ public:
     Frame(const Frame &frame);
 
     Frame(const Mat &im, const double &timeStamp, int cornersNum, Mat mask);
+    Frame(const Mat &im, const double &timeStamp, int cornersNum, Mat mask, vector<Point2f> oldCorners);
 
     double mTimeStamp;
 
@@ -31,6 +32,8 @@ public:
     static bool mbInitialFrame;
 
     /*Features*/
+    vector<Point2f> mvOldCorners;
+    vector<Point2f> mvNewCorners;
     vector<Point2f> mvCorners;
 
 

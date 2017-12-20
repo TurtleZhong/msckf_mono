@@ -22,7 +22,9 @@ Frame::Frame(const Frame &frame)
       mCamera(frame.mCamera),
       mnId(frame.mnId),
       mImgGray(frame.mImgGray),
-      mvCorners(frame.mvCorners)
+      mvCorners(frame.mvCorners),
+      mvOldCorners(frame.mvOldCorners),
+      mvNewCorners(frame.mvNewCorners)
 {
 
 }
@@ -38,6 +40,35 @@ Frame::Frame(const Mat &im, const double &timeStamp, int cornersNum, Mat mask = 
     /*Extract the Corners*/
     if(mbInitialFrame)
     {
+        mbInitialFrame = false;
+        mnMaxCorners        = Config::get<int>("Shi-Tomasi.maxCorners");
+        mdQualityLevel      = Config::get<double>("Shi-Tomasi.qualityLevel");
+        mnMinDistance       = Config::get<int>("Shi-Tomasi.minDistance");
+        mnBlockSize         = Config::get<int>("Shi-Tomasi.blockSize");
+        mbUseHarrisDetector = false;
+        mdK                 = Config::get<double>("Shi-Tomasi.k");
+
+        ExtractFeatures(mask,mnMaxCorners);
+    }
+    else
+    {
+        ExtractFeatures(mask,cornersNum);
+    }
+
+}
+
+Frame::Frame(const Mat &im, const double &timeStamp, int cornersNum, Mat mask, vector<Point2f> oldCorners)
+    :mTimeStamp(timeStamp),
+      mvOldCorners(oldCorners)
+{
+    mnId = nNextId++;
+    im.copyTo(mImgGray);
+    /*Before we Extract the Corners, We need to undistort the image*/
+
+    /*Extract the Corners*/
+    if(mbInitialFrame)
+    {
+        mbInitialFrame = false;
         mnMaxCorners        = Config::get<int>("Shi-Tomasi.maxCorners");
         mdQualityLevel      = Config::get<double>("Shi-Tomasi.qualityLevel");
         mnMinDistance       = Config::get<int>("Shi-Tomasi.minDistance");
@@ -66,22 +97,43 @@ void Frame::UnDistortImg()
  */
 void Frame::ExtractFeatures(Mat &mask, int cornersNum)
 {
-    goodFeaturesToTrack( mImgGray,
-                         mvCorners,
-                         cornersNum,
-                         mdQualityLevel,
-                         mnMinDistance,
-                         mask,
-                         mnBlockSize,
-                         mbUseHarrisDetector,
-                         mdK );
+    mvCorners.clear();
+    if(cornersNum > 0)
+    {
+        mvNewCorners.clear();
+        goodFeaturesToTrack( mImgGray,
+                             mvNewCorners,
+                             cornersNum,
+                             mdQualityLevel,
+                             mnMinDistance,
+                             mask,
+                             mnBlockSize,
+                             mbUseHarrisDetector,
+                             mdK );
 
-    cv::TermCriteria criteria = cv::TermCriteria(
-                cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS,
-                40,
-                0.01);
+        cv::TermCriteria criteria = cv::TermCriteria(
+                    cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS,
+                    40,
+                    0.01);
 
-    cv::cornerSubPix(mImgGray, mvCorners, cv::Size(5, 5), cv::Size(-1, -1), criteria);
+        cv::cornerSubPix(mImgGray, mvNewCorners, cv::Size(5, 5), cv::Size(-1, -1), criteria);
+    }
+
+
+    /*Contact the old and new features*/
+    if(mvOldCorners.empty())
+    {
+        mvCorners = mvNewCorners;
+    }
+    else if(mvNewCorners.empty())
+    {
+        mvCorners = mvOldCorners;
+    }
+    else
+    {
+        mvCorners = mvOldCorners;
+        mvCorners.insert(mvCorners.end(),mvNewCorners.begin(),mvNewCorners.end());
+    }
 }
 
 /*
