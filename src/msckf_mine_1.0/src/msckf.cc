@@ -12,6 +12,7 @@ MSCKF::MSCKF()
     mbReset = true;
     mnFeatureId = 0;
     mnMaxLifeTime = Config::get<int>("Shi-Tomasi.maxLifeTime");
+    mnSWFrameId = 0;
 }
 
 MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, const Vector3d &Gyro, double &dt)
@@ -28,6 +29,7 @@ MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, cons
     mnFeatureId = 0;
     mbReset = true;
     Config::get<int>("Shi-Tomasi.maxLifeTime");
+    mnSWFrameId = 0;
 
 }
 
@@ -269,6 +271,9 @@ void MSCKF::Marginalizefilter()
 
 void MSCKF::imageComing(const Mat &image, const double timestamp)
 {
+
+    Augmentation();
+
     mImage = image.clone();
     mTimeStamp = timestamp;
 
@@ -289,6 +294,13 @@ void MSCKF::imageComing(const Mat &image, const double timestamp)
         /*if the image is not the first frame, we can tracking*/
         Tracking();
 
+        /*after tracking, we got the features used for update*/
+
+        if(mvFeaturesForUpdate.size())
+        {
+            CalcResidualsAndStackingIt();
+        }
+
     }
 
 }
@@ -302,11 +314,18 @@ void MSCKF::Tracking()
     OpticalFlowTracking();
     mLastFrame = Frame(mCurrFrame);
 
+
+
+
 }
 
 
 void MSCKF::OpticalFlowTracking()
 {
+    /*
+     * target1: feature tracking
+     * target2: choose features for the update step
+     */
     vector<uchar> status;
     vector<float> err;
     Mat lastImage    = mLastFrame.mImgGray.clone();
@@ -320,6 +339,7 @@ void MSCKF::OpticalFlowTracking()
 
     vector<Point2f> corners_before = mvCorners;
     mvCorners.clear();
+    mvFeaturesForUpdate.clear();
     for(int i=0;i<corners_after.size();i++)
     {
 
@@ -348,11 +368,19 @@ void MSCKF::OpticalFlowTracking()
 
     }
 
-    /*delete the untracked or more than 20 times observed points*/
+    /*delete the untracked or more than 15 times observed points*/
     sort(vDeleteIndex.begin(),vDeleteIndex.end());
     sort(vLongTrackedFeaturesIndex.begin(),vLongTrackedFeaturesIndex.end());
+
+    /*prepare for the features which used for update*/
     for(int i = vDeleteIndex.size() -1; i >=0 ; i--)
     {
+        /*the feature should contain at least 3 observation*/
+        if(mvFeatureContainer[vDeleteIndex[i]].mvObservation.size() > 2)
+        {
+            mvFeaturesForUpdate.push_back(mvFeatureContainer[vDeleteIndex[i]]);
+        }
+
         mvFeatureContainer.erase(mvFeatureContainer.begin()+vDeleteIndex[i]);
     }
     /*corners also should be deleted*/
@@ -365,6 +393,7 @@ void MSCKF::OpticalFlowTracking()
     mLastFrame.GenerateMask(mask, mvCorners);
     int cornesNum = mLastFrame.mnMaxCorners - mvCorners.size();
     cout << BOLDCYAN"After tracking, we need add " << cornesNum << " new features!" << WHITE <<  endl;
+    cout << "In this update step, We use " << BOLDCYAN << mvFeaturesForUpdate.size() << WHITE" features for update." << endl;
     if(cornesNum > 20)
     {
         mCurrFrame = Frame(mImage, mTimeStamp, cornesNum, mask, mvCorners);
@@ -404,119 +433,6 @@ void MSCKF::unDistortImage()
 }
 
 
-void MSCKF::RunFeatureMatching()
-{
-
-    //    /*step 1: Construct the frame*/
-    //    this->ConstructFrame(mbReset);
-
-    //    if(mvFeatures.size() < 50 && mvFeatures.size() > 0)
-    //    {
-    //        /*it means that the number of tracked feature is too small */
-    //        mvFeatures.clear();
-    //        mvFeaturesIdx.clear();
-    //        Marginalizefilter();
-    //        mbReset = true;         /*which means we need to rest the filter*/
-    //    }
-
-    //    mvLostFeatures.clear();
-    //    mvLostFeatureCamIdx.clear();
-
-
-
-
-    //    /*we need to know if the status is true or not */
-    //    if(!mbReset)
-    //    {
-    //        /*in this case, the last frame is not empty so we can run the feature matching*/
-    //        /*the most inportment part is frame.matchesID
-    //         */
-
-    //        ORBmatcher orbMatcher(0.7);
-    //        orbMatcher.MatcheTwoFrames(frame, feedframe, false); /*it is important to use the pior to make the robust match*/
-
-    //        cv::Mat imMatch = orbMatcher.DrawFrameMatch(frame,feedframe);
-    //        cv::imshow("matches", imMatch);
-    //        cv::waitKey(0);
-
-
-    //        ManageOldFeatures();
-
-    //    }
-    //    else
-    //    {
-    //        /* since the mbReset is true, there are two cases
-    //         * case1: the first frame
-    //         * case2: the mvFeatures.size() < 50 which means the tracked features is two small
-    //         */
-    //        feedframe = Frame(frame);
-
-    //        /*step 2: AugmentNewFeatures*/
-
-    //        AugmentNewFeatures();
-    //        mbReset = false;
-    //    }
-}
-
-/**
- * @brief MSCKF::AugmentNewFeatures-> used in RunFeatureMatching();
- */
-void MSCKF::AugmentNewFeatures()
-{
-    //    mvFeatures    = vector<MatrixXd>(frame.mvKeys.size(), MatrixXd::Zero(2,1));
-    //    mvFeaturesIdx = vector<Vector2i>(frame.mvKeys.size(), Vector2i::Zero());
-
-    //    /*since the filter is reseted, we need add all the features to the feature manager vector*/
-
-    //    for(int i = 0; i < frame.mvKeys.size(); i++)
-    //    {
-    //        mvFeatures[i](0,0) = frame.mvKeys[i].pt.x;
-    //        mvFeatures[i](1,0) = frame.mvKeys[i].pt.y;
-    //        mvFeaturesIdx[i]   = Vector2i(i, int(frame.mnId));
-    //    }
-}
-
-void MSCKF::ManageOldFeatures()
-{
-    //    map<int,int> matches = Converter::swapMatchesId(frame.matchesId);
-    //    map<int,int>::iterator matches_iter;
-
-    //    for(int j = 0; j < mvFeaturesIdx.size(); j++)
-    //    {
-    //        int feedId = mvFeaturesIdx[j](0); /*key*/
-    //        matches_iter = matches.find(feedId);
-    //        if(matches_iter!=matches.end())
-    //        {
-    //            /*feature were tracked!*/
-    //            int M = mvFeatures[j].rows();
-    //            int N = mvFeatures[j].cols();
-    //            mvFeatures[j].conservativeResize(M,N+1);
-    //            mvFeatures[j](0,N) = frame.mvKeys[matches_iter->second].pt.x;
-    //            mvFeatures[j](1,N) = frame.mvKeys[matches_iter->second].pt.y;
-
-    //        }
-    //        else
-    //        {
-    //            /*feature were not tracked, we need remove it and augment the lostfeatures*/
-    //            mvLostFeatures.push_back(mvFeatures[j]);
-
-    //            mvLostFeatureCamIdx.push_back(mvFeaturesIdx[j](1));
-
-    //            mvFeatures.erase(mvFeatures.begin() + j);
-    //            mvFeaturesIdx.erase(mvFeaturesIdx.begin() + j);
-
-    //        }
-
-
-    //    }
-
-    /*show the result*/
-
-
-
-}
-
-
 Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses)
 {
     ceres::Problem *problem;
@@ -527,20 +443,40 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
     unsigned int i = 0;
 
     Vector3d point3d(1.0,1.0,1.0); /*the initial guess*/
+
+    VectorOfPose::iterator pose_iter = poses.begin();
+
+    /*information for this triangulation*/
+    for(int i = 0; i < z.size(); i++)
+    {
+        cout << "z:\n" << z[i] << endl;
+    }
+
+    for(int i = 0; i < poses.size(); i++)
+    {
+        cout << "R,t:\n" << poses[i].q.coeffs() << "\n" << poses[i].t << endl;
+    }
+
+
     for(vector<Vector2d>::iterator z_iter = z.begin(); z_iter!=z.end(); z_iter++)
     {
-        Vector2d &z = *z_iter;
+        pose_iter += i;
+        Vector2d z = *z_iter;
         ceres::CostFunction *cost_function = TriangulationReprojectionErr::Create(z);
 
+
         problem->AddResidualBlock(cost_function, loss_function,
-                                  poses[i].q.coeffs().data(),
-                                  poses[i].t.data(),
+                                  pose_iter->q.coeffs().data(),
+                                  pose_iter->t.data(),
                                   point3d.data());
-        problem->SetParameterization(poses[i].q.coeffs().data(),
+        cout << BOLDGREEN"Run here--> The optimize step" << WHITE << endl;
+        problem->SetParameterization(pose_iter->q.coeffs().data(),
                                      quaternion_local_parameterization);
 
         i++;
     }
+    cout << BOLDGREEN"Run here--> The optimize step" << WHITE << endl;
+
 
     /*since we only optimize the 3d point in the word, so we need to set the q and t constant*/
     for(VectorOfPose::iterator pose_iter = poses.begin(); pose_iter!=poses.end(); pose_iter++)
@@ -550,6 +486,7 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
     }
 
     /*optimize the point3d*/
+
     ceres::Solver::Options options;
     options.max_num_iterations = 100;
     options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
@@ -566,11 +503,6 @@ void MSCKF::CalcResidualsAndStackingIt()
 {
     /*TEST AND DEBUG*/
 
-    cout << "mvFeatures.size() = " << mvFeatures.size() << endl;
-    cout << "mvLostFeatures.size() = " << mvLostFeatures.size() << endl;
-
-
-
     /*Ho and r is used for filter update step*/
 
     vector<MatrixXd> vH;
@@ -578,17 +510,21 @@ void MSCKF::CalcResidualsAndStackingIt()
 
     /*Ho and r is used for filter update step*/
 
-    for(int i = 0; i < mvLostFeatures.size(); i++)
+    for(int i = 0; i < mvFeaturesForUpdate.size(); i++)
     {
-        /*the ith lost feature*/
+        /*the ith lost feature or the ith feature used for update*/
 
-        vector<Vector2d> z_observation;
+        vector<Vector2d> z_observation = mvFeaturesForUpdate[i].mvObservation;
         VectorOfPose poses;
 
 
 
         /*num -> the num of observation of ith feature*/
-        int num = mvLostFeatures[i].cols();
+        int num = mvFeaturesForUpdate[i].mvObservation.size();
+
+        /*featureFrameId -> the feature first observed in which frame*/
+        unsigned int featureFrameId = mvFeaturesForUpdate[i].mnFrameId;
+
         for(int j = 0; j < num; j++)
         {
             /*this part we featch the 2d observation and the transition matrix
@@ -597,13 +533,13 @@ void MSCKF::CalcResidualsAndStackingIt()
              * aim-> optimize the world pose of ith feature
              */
 
-            z_observation.push_back(Vector2d(mvLostFeatures[i].col(j)));
             /*since the triangulation need the Tcw*/
             /*but we only get the state from the mstate*/
+
             Pose pose;
-            Quaterniond qwb = Quaterniond( mState.segment<4>(16 + 10*j));
+            Quaterniond qwb = Quaterniond( mState.segment<4>(16 + 10*(featureFrameId - mnSWFrameId + j)));
             Matrix3d Rwb = qwb.toRotationMatrix();
-            Vector3d twb = mState.segment<3>(16 + 10*j + 4);
+            Vector3d twb = mState.segment<3>(16 + 10*(featureFrameId - mnSWFrameId + j) + 4);
             Matrix4d Twb = Matrix4d::Identity();
             Twb.block<3,3>(0,0) = Rwb;
             Twb.block<3,1>(0,3) = twb;

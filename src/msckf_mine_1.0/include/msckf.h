@@ -82,31 +82,19 @@ public:
 
 
     /*Tracking Part*/
-    void Tracking();
-    void OpticalFlowTracking();
-    void CornersToFeatures(Frame &frame);
-
-
-
-    /*Old Functions*/
-    void RunFeatureMatching();
-    /*Old Functions*/
-
-
-
     /* Residuals and Update step
      * Since we have extract features from the consecutive image
      * We have track this features and use the measurements to update
      * the msckf
      */
-    /*Feature Mannager Parts*/
-    vector<Eigen::MatrixXd> mvFeatures;
-    vector<Eigen::Vector2i> mvFeaturesIdx;        /* i , imageNum*/
-    vector<Eigen::MatrixXd> mvLostFeatures;
-    vector<int>             mvLostFeatureCamIdx;
+    void Tracking();
+    void OpticalFlowTracking();
+    void CornersToFeatures(Frame &frame);
 
-    void AugmentNewFeatures();
-    void ManageOldFeatures();
+
+    VectorOfFeatures mvFeaturesForUpdate;
+    int mnSWFrameId; /*since we maintain a Slide Window, we should know the first frame id because we will erase some if the state vector too large*/
+
 
     Vector3d TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose & poses);
 
