@@ -30,6 +30,16 @@ int main(int argc, char *argv[])
 
         cout << msckf.mvFeatureContainer.size() << endl;
 
+        /*the 15th feature information*/
+        cout << "Information of 15th feature" << endl;
+        cout << "Feature ID: " << msckf.mvFeatureContainer[14].mnId << endl;
+        cout <<BOLDGREEN << "Frame ID:"<< msckf.mvFeatureContainer[14].mnFrameId <<WHITE <<  endl;
+        Feature &feature = msckf.mvFeatureContainer[14];
+        for(int i = 0; i < feature.mvObservation.size(); i++)
+        {
+            cout << "The " << i << "th observation\n" <<feature.mvObservation[i] << endl;
+        }
+
         Mat imFeature = ShowFeatures(msckf.mLastFrame);
 
         /*information of msckf and frame*/
