@@ -325,7 +325,7 @@ void MSCKF::OpticalFlowTracking()
 
         if(status[i]
                 &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))>=0)
-                &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))<30)
+                &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))<40)
                 &&corners_after[i].x > 0. && corners_after[i].x < 752. && corners_after[i].y > 0. && corners_after[i].y < 480.)
         {
             mvCorners.push_back(corners_after[i]);
