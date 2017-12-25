@@ -312,7 +312,7 @@ void MSCKF::OpticalFlowTracking()
     Mat lastImage    = mLastFrame.mImgGray.clone();
     Mat currentImage = mImage.clone();
     vector<Point2f> corners_after;
-//    corners_after.clear();
+
     calcOpticalFlowPyrLK(lastImage,currentImage,mvCorners,corners_after, status, err);
 
     vector<int> vDeleteIndex;
@@ -338,8 +338,6 @@ void MSCKF::OpticalFlowTracking()
                 vDeleteIndex.push_back(i);
                 vLongTrackedFeaturesIndex.push_back(i);
             }
-
-
         }
         else
         {
@@ -399,37 +397,10 @@ void MSCKF::CornersToFeatures(Frame &frame)
 }
 
 
-
-
-
-
 void MSCKF::unDistortImage()
 {
     cv::Mat tmp = mImage.clone();
     cv::undistort(tmp, mImage, mCAMParams.getK(), mCAMParams.getD(), cv::Mat());
-}
-
-
-void MSCKF::ConstructFrame(const Mat &im, const double &timeStamp)
-{
-
-    //    frame = Frame(im, timeStamp, mpORBextractor);
-    //    mImage = im.clone();
-}
-
-void MSCKF::ConstructFrame(bool reset)
-{
-    //    if(!reset)
-    //    {
-    //        mpORBextractor->setFeatureNum(Config::get<int>("ORBextractor.nFeaturesInit"));
-    //        frame = Frame(mImage, mTimeStamp, mpORBextractor);
-    //    }
-
-    //    else
-    //    {
-    //        mpORBextractor->setFeatureNum(Config::get<int>("ORBextractor.nFeatures"));
-    //        frame = Frame(mImage, mTimeStamp, mpORBextractor);
-    //    }
 }
 
 
@@ -888,7 +859,5 @@ void MSCKF::Update(MatrixXd &H, MatrixXd &rq, MatrixXd &TH)
 
 
 }
-
-
 
 }

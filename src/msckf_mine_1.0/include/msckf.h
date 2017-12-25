@@ -88,12 +88,7 @@ public:
 
 
 
-
-
-
     /*Old Functions*/
-    void ConstructFrame(const Mat &im, const double &timeStamp); /*for test*/
-    void ConstructFrame(bool reset = false);
     void RunFeatureMatching();
     /*Old Functions*/
 
