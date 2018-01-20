@@ -273,6 +273,7 @@ void MSCKF::imageComing(const Mat &image, const double timestamp)
 {
 
     Augmentation();
+//    cout << "Check the mState:\n" <<mState << endl;
 
     mImage = image.clone();
     mTimeStamp = timestamp;
@@ -313,9 +314,6 @@ void MSCKF::Tracking()
 
     OpticalFlowTracking();
     mLastFrame = Frame(mCurrFrame);
-
-
-
 
 }
 

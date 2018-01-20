@@ -31,7 +31,7 @@ make
 
 # 5. How to run
 ####Then in the bin folder run:
-./pose_graph_ceres
+
 
 then you will get result in result/
 
