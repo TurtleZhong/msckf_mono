@@ -108,6 +108,9 @@ public:
     void QRdecomposition(MatrixXd H, MatrixXd r, MatrixXd &rq, MatrixXd &TH);
     void Update(MatrixXd &H,MatrixXd &rq, MatrixXd &TH);
 
+    /*Show the state*/
+    void ShowState(bool flag_R = false, bool flag_t = true, bool flag_v = false);
+
 };
 
 

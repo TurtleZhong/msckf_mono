@@ -273,7 +273,6 @@ void MSCKF::imageComing(const Mat &image, const double timestamp)
 {
 
     Augmentation();
-//    cout << "Check the mState:\n" <<mState << endl;
 
     mImage = image.clone();
     mTimeStamp = timestamp;
@@ -282,6 +281,7 @@ void MSCKF::imageComing(const Mat &image, const double timestamp)
     unDistortImage();
     if(mbReset)
     {
+        cout << "The firstframe or all the camera state is deleted." << endl;
         mbReset = false;
         /*the first frame, we need to initial the features*/
         int cornersNum = Config::get<int>("Shi-Tomasi.maxCorners");
@@ -791,6 +791,29 @@ void MSCKF::Update(MatrixXd &H, MatrixXd &rq, MatrixXd &TH)
         mState.segment<3>(i+7) += delta_x.segment<3>(i+6);
     }
 
+
+}
+
+void MSCKF::ShowState(bool flag_R, bool flag_t, bool flag_v)
+{
+    cout << BOLDCYAN"---State Information---" << WHITE << endl;
+    if(flag_R)
+    {
+        cout << BOLDGREEN << "Rotation:\n" << WHITE;
+        Quaterniond q = Quaterniond(mState.segment<4>(0));
+        cout << q.matrix() << endl;
+    }
+    if(flag_t)
+    {
+        cout << BOLDGREEN << "Translation:\n" << WHITE;
+        cout << mState.segment<3>(4) << endl;
+    }
+
+    if(flag_v)
+    {
+        cout << BOLDGREEN << "Velocity:\n" << WHITE;
+        cout << mState.segment<3>(7) << endl;
+    }
 
 }
 

@@ -124,4 +124,7 @@ target_link_libraries(tracking_feature_manager ${PROJECT_NAME})
 add_executable(frame_test test/frame_test/frame_test.cpp )
 target_link_libraries(frame_test ${PROJECT_NAME})
 
+add_executable(frame_with_imu_test test/frame_test/frame_with_imu_test.cpp )
+target_link_libraries(frame_with_imu_test ${PROJECT_NAME})
+
 

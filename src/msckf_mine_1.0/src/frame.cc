@@ -34,8 +34,6 @@ Frame::Frame(const Mat &im, const double &timeStamp, int cornersNum, Mat mask = 
 {
     mnId = nNextId++;
     im.copyTo(mImgGray);
-    /*Before we Extract the Corners, We need to undistort the image*/
-    //UnDistortImg();
 
     /*Extract the Corners*/
     if(mbInitialFrame)
