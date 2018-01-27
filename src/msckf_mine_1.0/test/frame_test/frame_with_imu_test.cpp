@@ -50,9 +50,10 @@ int main(int argc, char *argv[])
         Mat image = cv::imread(imagePath,CV_LOAD_IMAGE_GRAYSCALE);
         double cam_time = iter->time_stamp;
 
+        cout << BOLDYELLOW"---In IMU propagate Part---" << WHITE << endl;
         while (imu_time <= cam_time )
         {
-            cout << BOLDYELLOW"---In IMU propagate Part---" << WHITE << endl;
+
             imu_index++;
             /*For this part, we only propagate the imu.*/
             imu_time = vImu[imu_index].time_stamp;
@@ -71,14 +72,15 @@ int main(int argc, char *argv[])
             msckf.ShowState();
 
             pre_imu_time = imu_time;
-            cout << BOLDYELLOW"---IMU propagate Part ended---" << WHITE << endl << endl << endl;
-        }
 
-        msckf.imageComing(image,iter->time_stamp);
+        }
+        cout << BOLDYELLOW"---IMU propagate Part ended---" << WHITE << endl << endl << endl;
+
+        cout << endl << BOLDRED"---Camera part -> Image is coming---" << WHITE << endl;
 
         cout <<BOLDRED << "frame id = " << msckf.mLastFrame.mnId << WHITE << endl;
 
-        cout << msckf.mvFeatureContainer.size() << endl;
+        msckf.imageComing(image,iter->time_stamp);
 
 
         Mat imFeature = ShowFeatures(msckf.mLastFrame);
@@ -87,6 +89,8 @@ int main(int argc, char *argv[])
 
         cv::imshow("features", imFeature);
         cv::waitKey(0);
+
+        cout << BOLDRED"---Camera part -> Image is done---" << WHITE << endl << endl << endl;
 
     }
 

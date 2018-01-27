@@ -297,10 +297,10 @@ void MSCKF::imageComing(const Mat &image, const double timestamp)
 
         /*after tracking, we got the features used for update*/
 
-        if(mvFeaturesForUpdate.size())
-        {
-            CalcResidualsAndStackingIt();
-        }
+//        if(mvFeaturesForUpdate.size())
+//        {
+//            CalcResidualsAndStackingIt();
+//        }
 
     }
 
@@ -344,7 +344,8 @@ void MSCKF::OpticalFlowTracking()
         if(status[i]
                 &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))>=0)
                 &&((abs(corners_before[i].x-corners_after[i].x)+abs(corners_before[i].y-corners_after[i].y))<40)
-                &&corners_after[i].x > 0. && corners_after[i].x < 752. && corners_after[i].y > 0. && corners_after[i].y < 480.)
+                && corners_after[i].x > 0. && corners_after[i].x < float(currentImage.cols)
+                && corners_after[i].y > 0. && corners_after[i].y < float(currentImage.rows))
         {
             mvCorners.push_back(corners_after[i]);
             //cv::circle( currentImage, corners_after[i], 3, Scalar(0,0,255), -1, 8, 0 );
