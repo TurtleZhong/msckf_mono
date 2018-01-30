@@ -25,7 +25,7 @@ public:
         Eigen::Map<const Eigen::Matrix<T, 3, 1> > t(translation);
         Eigen::Map<const Eigen::Matrix<T, 3, 1> > pw(point3d);
 
-        Eigen::Matrix<T, 3, 1> pc = q*pw + t;
+        Eigen::Matrix<T, 3, 1> pc = q.matrix()*pw + t;
 
 
         T fx = Config::get<T>("Camera.fx");

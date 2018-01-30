@@ -58,6 +58,8 @@ public:
     Matrix4d    calcOmegaMatrix(const Vector3d &w);
     Quaterniond calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d curr_w, double &dt);
 
+    int GetSlideWindowSize();
+
     /*Augmentation cf. P.52*/
     void Augmentation();
     void Marginalizefilter();
@@ -78,7 +80,7 @@ public:
     VectorOfFeatures mvFeatureContainer;
     vector<Point2f>  mvCorners;             /*only keep the exist corners*/
     bool mbReset;                           /*only use in the first frame and the filter is reseted*/
-    unsigned int mnMaxLifeTime;
+    int mnMaxLifeTime;
 
 
     /*Tracking Part*/
@@ -96,7 +98,7 @@ public:
     int mnSWFrameId; /*since we maintain a Slide Window, we should know the first frame id because we will erase some if the state vector too large*/
 
 
-    Vector3d TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose & poses);
+    Vector3d TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose & poses, ceres::Problem *problem);
 
     void CalcResidualsAndStackingIt();
 

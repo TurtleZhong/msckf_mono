@@ -78,9 +78,9 @@ int main(int argc, char *argv[])
 
         cout << endl << BOLDRED"---Camera part -> Image is coming---" << WHITE << endl;
 
-        cout <<BOLDRED << "frame id = " << msckf.mLastFrame.mnId << WHITE << endl;
-
         msckf.imageComing(image,iter->time_stamp);
+
+        cout <<BOLDRED << "frame id = " << msckf.mLastFrame.mnId << WHITE << endl;
 
 
         Mat imFeature = ShowFeatures(msckf.mLastFrame);
