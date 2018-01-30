@@ -223,6 +223,12 @@ Quaterniond MSCKF::calcDeltaQuaternion(const Vector3d &mGyroPrev, const Vector3d
 
 }
 
+int MSCKF::GetSlideWindowSize()
+{
+    int N = (mState.size() - 16) / 10;
+    return N;
+}
+
 void MSCKF::Augmentation()
 {
     // when an image is captured, the current body quaternion, position and velocity are added to the
@@ -297,10 +303,12 @@ void MSCKF::imageComing(const Mat &image, const double timestamp)
 
         /*after tracking, we got the features used for update*/
 
-//        if(mvFeaturesForUpdate.size())
-//        {
-//            CalcResidualsAndStackingIt();
-//        }
+        if(!mvFeaturesForUpdate.empty())
+        {
+            cout << BOLDRED"***Ready to update the filter!***" << WHITE << endl;
+            cout << BOLDRED"***Check the triangulation part***" << WHITE << endl;
+            CalcResidualsAndStackingIt();
+        }
 
     }
 
@@ -377,7 +385,6 @@ void MSCKF::OpticalFlowTracking()
             //cv::circle( currentImage, corners_after[i], 3, Scalar(0,0,255), -1, 8, 0 );
             /*we need add the observation to the container*/
             mvFeatureContainer[i].mvObservation.push_back(Vector2d(corners_after[i].x,corners_after[i].y));
-            cout << "mnMaxLifeTime = " << mnMaxLifeTime << endl;
             if(mvFeatureContainer[i].mvObservation.size() > mnMaxLifeTime)
             {
                 /*delete that feature or use it to update the filter*/
@@ -459,9 +466,9 @@ void MSCKF::unDistortImage()
 }
 
 
-Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses)
+Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses, ceres::Problem* problem)
 {
-    ceres::Problem *problem;
+//    ceres::Problem *problem = new ceres::Problem;
     /*build the optimization problem*/
     ceres::LossFunction* loss_function = new ceres::HuberLoss(1.0);
     ceres::LocalParameterization* quaternion_local_parameterization =
@@ -470,7 +477,6 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
 
     Vector3d point3d(1.0,1.0,1.0); /*the initial guess*/
 
-    VectorOfPose::iterator pose_iter = poses.begin();
 
     /*information for this triangulation*/
     for(int i = 0; i < z.size(); i++)
@@ -480,17 +486,17 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
 
     for(int i = 0; i < poses.size(); i++)
     {
-        cout << "R,t:\n" << poses[i].q.coeffs() << "\n" << poses[i].t << endl;
+        cout << "R,t:\n" << poses[i].q.matrix() << "\n" << poses[i].t << endl;
     }
 
+    cin.get();
 
-    for(vector<Vector2d>::iterator z_iter = z.begin(); z_iter!=z.end(); z_iter++)
+    for(VectorOfPose::iterator pose_iter = poses.begin(); pose_iter!=poses.end(); pose_iter++)
     {
-        pose_iter += i;
-        Vector2d z = *z_iter;
-        ceres::CostFunction *cost_function = TriangulationReprojectionErr::Create(z);
-
-
+        cout << "z = \n" << z[i] << endl;
+        cout << "R,t = \n" << pose_iter->q.matrix() << endl << pose_iter->t << endl;
+        ceres::CostFunction *cost_function = TriangulationReprojectionErr::Create(z[i]);
+        cout << "run here!" << endl;
         problem->AddResidualBlock(cost_function, loss_function,
                                   pose_iter->q.coeffs().data(),
                                   pose_iter->t.data(),
@@ -498,9 +504,9 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
         cout << BOLDGREEN"Run here--> The optimize step" << WHITE << endl;
         problem->SetParameterization(pose_iter->q.coeffs().data(),
                                      quaternion_local_parameterization);
-
         i++;
     }
+
     cout << BOLDGREEN"Run here--> The optimize step" << WHITE << endl;
 
 
@@ -511,6 +517,8 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
         problem->SetParameterBlockConstant(pose_iter->t.data());
     }
 
+
+
     /*optimize the point3d*/
 
     ceres::Solver::Options options;
@@ -520,7 +528,8 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
     ceres::Solver::Summary summary;
     ceres::Solve(options, problem, &summary);
 
-    //std::cout << BOLDCYAN << summary.FullReport() << '\n';
+//    std::cout << BOLDCYAN << summary.FullReport() << WHITE"\n";
+    cout << "Point3d is: \n" << point3d << endl;
     return point3d;
 }
 
@@ -538,12 +547,11 @@ void MSCKF::CalcResidualsAndStackingIt()
 
     for(int i = 0; i < mvFeaturesForUpdate.size(); i++)
     {
+        cout << "Slide window size is: " << GetSlideWindowSize() << endl;
         /*the ith lost feature or the ith feature used for update*/
 
         vector<Vector2d> z_observation = mvFeaturesForUpdate[i].mvObservation;
         VectorOfPose poses;
-
-
 
         /*num -> the num of observation of ith feature*/
         int num = mvFeaturesForUpdate[i].mvObservation.size();
@@ -580,11 +588,12 @@ void MSCKF::CalcResidualsAndStackingIt()
         cout << "data for Triangulation:" << endl;
         cout << "poses.size() = " << poses.size() << endl << "z_observation.size() = " << z_observation.size() << endl;
 
-
-        /*Triangulation Part*/
-        Vector3d point_i_3d = TriangulationWorldPoint(z_observation, poses);
-
         cin.get();
+        /*Triangulation Part*/
+        ceres::Problem problem;
+        Vector3d point_i_3d = TriangulationWorldPoint(z_observation, poses, &problem);
+
+
 
 
 
