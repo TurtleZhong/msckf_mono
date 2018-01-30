@@ -479,36 +479,29 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
 
 
     /*information for this triangulation*/
-    for(int i = 0; i < z.size(); i++)
-    {
-        cout << "z:\n" << z[i] << endl;
-    }
+//    for(int i = 0; i < z.size(); i++)
+//    {
+//        cout << "z:\n" << z[i] << endl;
+//    }
 
-    for(int i = 0; i < poses.size(); i++)
-    {
-        cout << "R,t:\n" << poses[i].q.matrix() << "\n" << poses[i].t << endl;
-    }
-
-    cin.get();
+//    for(int i = 0; i < poses.size(); i++)
+//    {
+//        cout << "R,t:\n" << poses[i].q.matrix() << "\n" << poses[i].t << endl;
+//    }
 
     for(VectorOfPose::iterator pose_iter = poses.begin(); pose_iter!=poses.end(); pose_iter++)
     {
-        cout << "z = \n" << z[i] << endl;
-        cout << "R,t = \n" << pose_iter->q.matrix() << endl << pose_iter->t << endl;
+//        cout << "z = \n" << z[i] << endl;
+//        cout << "R,t = \n" << pose_iter->q.matrix() << endl << pose_iter->t << endl;
         ceres::CostFunction *cost_function = TriangulationReprojectionErr::Create(z[i]);
-        cout << "run here!" << endl;
         problem->AddResidualBlock(cost_function, loss_function,
                                   pose_iter->q.coeffs().data(),
                                   pose_iter->t.data(),
                                   point3d.data());
-        cout << BOLDGREEN"Run here--> The optimize step" << WHITE << endl;
         problem->SetParameterization(pose_iter->q.coeffs().data(),
                                      quaternion_local_parameterization);
         i++;
     }
-
-    cout << BOLDGREEN"Run here--> The optimize step" << WHITE << endl;
-
 
     /*since we only optimize the 3d point in the word, so we need to set the q and t constant*/
     for(VectorOfPose::iterator pose_iter = poses.begin(); pose_iter!=poses.end(); pose_iter++)
@@ -529,7 +522,7 @@ Vector3d MSCKF::TriangulationWorldPoint(vector<Vector2d> &z, VectorOfPose &poses
     ceres::Solve(options, problem, &summary);
 
 //    std::cout << BOLDCYAN << summary.FullReport() << WHITE"\n";
-    cout << "Point3d is: \n" << point3d << endl;
+
     return point3d;
 }
 
@@ -588,14 +581,10 @@ void MSCKF::CalcResidualsAndStackingIt()
         cout << "data for Triangulation:" << endl;
         cout << "poses.size() = " << poses.size() << endl << "z_observation.size() = " << z_observation.size() << endl;
 
-        cin.get();
         /*Triangulation Part*/
         ceres::Problem problem;
         Vector3d point_i_3d = TriangulationWorldPoint(z_observation, poses, &problem);
-
-
-
-
+        cout << BOLDCYAN"After triangulation, the " << i << " th world point is: \n" << point_i_3d << WHITE << endl;
 
         /*cf.53 6.5.2 Error Representation Monocular Visual Inertial Odometry on a Mobile Device*/
 
@@ -605,7 +594,7 @@ void MSCKF::CalcResidualsAndStackingIt()
         Vector2d rij;
         MatrixXd Hxi = MatrixXd::Zero(2*num, 15+9*num);
         MatrixXd Hfi = MatrixXd::Zero(2*num, 3);
-        VectorXd ri;
+        VectorXd ri(2 * num);
         MatrixXd roi;
         MatrixXd Hoi;
 
@@ -625,17 +614,29 @@ void MSCKF::CalcResidualsAndStackingIt()
              * Hfij -->2*3  -->Hfi
              */
             Vector2d zij = z_observation[j];
+
             CalcHxAndHf(Tcw, point_i_3d, Hbij, Hfij, zij, rij);
 
+//            cout << "***The ith feature, the j observation information***" << endl;
+//            cout << "Hbij = \n" << Hbij << endl;
+//            cout << "Hfij = \n" << Hfij << endl;
+//            cout << "rij  = \n" << rij  << endl;
+
+
+
             Hxij.block<2,9>(0, 15+9*j) = Hbij;
+
             Hxi.block(2*j,0, 2,Hxi.cols()) = Hxij; /*very important*/
+
             Hfi.block<2,3>(2*j,0) = Hfij;
+
             ri.segment<2>(2*j) = rij;
-
-
-
-
         }
+
+//        cout << "***Information of Hx and Hf***" << endl;
+//        cout << "The num of feature used for update is: " << num << endl;
+//        cout << "Hxi = \n" << Hxi << endl;
+//        cout << "Hfi = \n" << Hfi << endl;
 
         /*step3: nullspace to calc the H*/
         MatrixXd Ai;
@@ -646,13 +647,15 @@ void MSCKF::CalcResidualsAndStackingIt()
         /* step4: Outiler Detection
          * method: Chi-square test
          */
-        if (ChiSquareTest(Hoi,roi,mCovariance))
-        {
-            /*inlier*/
-            /*keep the roi and Hoi into the vector*/
-            vH.push_back(Hoi);
-            vr.push_back(roi);
-        }
+//        if (ChiSquareTest(Hoi,roi,mCovariance))
+//        {
+//            /*inlier*/
+//            /*keep the roi and Hoi into the vector*/
+//            vH.push_back(Hoi);
+//            vr.push_back(roi);
+//        }
+        vH.push_back(Hoi);
+        vr.push_back(roi);
 
 
 
@@ -663,14 +666,19 @@ void MSCKF::CalcResidualsAndStackingIt()
 
     /*after the lost features loop*/
     /*update step is needed*/
-
+    cout << "vH.size() = " << vH.size() << endl;
     MsckfUpdate(vH,vr);
 
 
 
 }
 
-void MSCKF::CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi, Vector2d zij, Vector2d rij)
+void MSCKF::CalcHxAndHf(Matrix4d &Tcw,
+                        Vector3d &pw,
+                        Matrix<double, 2,9> &Hbi,
+                        Matrix<double, 2,3> &Hfi,
+                        Vector2d zij,
+                        Vector2d rij)
 {
     /*step1: translate the point_i_3d to the current j frame cj_p_fi*/
     Matrix3d Rcw = Tcw.block<3,3>(0,0);
@@ -710,6 +718,7 @@ void MSCKF::CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  
     Hbi = Hfi * Hfb; /* 2 * 9 */
 
     /*step3 -> calc ri*/
+    /*Actually rij is not calc like this.*/
     rij = zij - z_hat;
 }
 
@@ -759,6 +768,7 @@ void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr)
     int tmpRowH = 0;
     int tmpRowr = 0;
 
+    cin.get();
     for(int i = 0; i < vSize; i++)
     {
         H.block(tmpRowH, 0, vRowH[i], colH) = vH[i];
