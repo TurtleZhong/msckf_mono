@@ -28,7 +28,7 @@ MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, cons
     mGravity = Vector3d(0.0, 0.0, Config::get<double>("g"));
     mnFeatureId = 0;
     mbReset = true;
-    Config::get<int>("Shi-Tomasi.maxLifeTime");
+    mnMaxLifeTime = Config::get<int>("Shi-Tomasi.maxLifeTime");
     mnSWFrameId = 0;
 
 }
@@ -313,6 +313,32 @@ void MSCKF::Tracking()
     cout << BOLDCYAN << "--L-K Tracking--" << WHITE << endl;
 
     OpticalFlowTracking();
+
+    /*Check if the mvFeatureContainer is empty*/
+    if(mvFeaturesForUpdate.empty())
+    {
+        cout << BOLDMAGENTA"In this frame, We do not update the filter." << WHITE << endl;
+    }
+    else
+    {
+        /*Show the information of the features used for update*/
+        cout << BOLDGREEN"---Below are the information fo features used for update---" << WHITE << endl;
+        for(int i = 0; i < mvFeaturesForUpdate.size(); i++)
+        {
+            Feature &features = mvFeaturesForUpdate[i];
+            cout << BOLDGREEN"************************************" << WHITE << endl;
+            cout << "  The feature was extract in frame: " << features.mnFrameId << endl;
+            cout << "         The id of this feature is: " << features.mnId << endl;
+            cout << "      The number of observation is: " << features.mvObservation.size() << endl;
+            cout << "The observation of this feature is: " << endl;
+            for(int j = 0; j < features.mvObservation.size(); j++)
+            {
+                cout << "The " << j << "th observation\n" <<features.mvObservation[j] << endl;
+            }
+            cout << BOLDGREEN"************************************" << WHITE << endl;
+        }
+    }
+
     mLastFrame = Frame(mCurrFrame);
 
 }
@@ -351,6 +377,7 @@ void MSCKF::OpticalFlowTracking()
             //cv::circle( currentImage, corners_after[i], 3, Scalar(0,0,255), -1, 8, 0 );
             /*we need add the observation to the container*/
             mvFeatureContainer[i].mvObservation.push_back(Vector2d(corners_after[i].x,corners_after[i].y));
+            cout << "mnMaxLifeTime = " << mnMaxLifeTime << endl;
             if(mvFeatureContainer[i].mvObservation.size() > mnMaxLifeTime)
             {
                 /*delete that feature or use it to update the filter*/
