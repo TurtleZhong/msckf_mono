@@ -21,7 +21,7 @@ Camera.k2: 0.07395907
 Camera.p1: 0.00019359
 Camera.p2: 1.76187114e-05
 
-sigma_img: 20
+sigma_img: 0.1
 
 # inertial sensor noise model parameters (static)
 gyroscope_noise_density: 1.6968e-04     # [ rad / s / sqrt(Hz) ]   ( gyro "white noise" )

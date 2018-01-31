@@ -102,13 +102,13 @@ public:
 
     void CalcResidualsAndStackingIt();
 
-    void CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi, Vector2d zij, Vector2d rij);
+    void CalcHxAndHf(Matrix4d &Tcw, Vector3d &pw, Matrix<double, 2,9> &Hbi,  Matrix<double, 2,3> &Hfi, Vector2d &zij, Vector2d &rij);
     void nullSpace(MatrixXd &H, MatrixXd &A);
     bool ChiSquareTest(MatrixXd &Hoi, MatrixXd &roi, MatrixXd &covariance);
 
-    void MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr);
-    void QRdecomposition(MatrixXd H, MatrixXd r, MatrixXd &rq, MatrixXd &TH);
-    void Update(MatrixXd &H,MatrixXd &rq, MatrixXd &TH);
+    void MsckfUpdate(vector<MatrixXd> &vH, vector<VectorXd> &vr);
+    void QRdecomposition(MatrixXd H, VectorXd r, VectorXd &rq, MatrixXd &TH);
+    void Update(MatrixXd &H, VectorXd &rq, MatrixXd &TH);
 
     /*Show the state*/
     void ShowState(bool flag_R = false, bool flag_t = true, bool flag_v = false);
