@@ -597,6 +597,9 @@ void MSCKF::CalcResidualsAndStackingIt()
         VectorXd ri(2 * num);
         MatrixXd roi;
         MatrixXd Hoi;
+        VectorXd noise = VectorXd::Ones(2*num);
+        MatrixXd ni(noise.asDiagonal());
+//        MatrixXd ni = MatrixXd::Identity(2*num);
 
         for(int j = 0; j < num; j++)
         {
@@ -632,7 +635,8 @@ void MSCKF::CalcResidualsAndStackingIt()
 
             ri.segment<2>(2*j) = rij;
         }
-
+        ni = mCAMParams.sigma_img * mCAMParams.sigma_img * ni;
+        cout << "ni = \n" << ni << endl;
 //        cout << "***Information of Hx and Hf***" << endl;
 //        cout << "The num of feature used for update is: " << num << endl;
 //        cout << "Hxi = \n" << Hxi << endl;
@@ -640,9 +644,16 @@ void MSCKF::CalcResidualsAndStackingIt()
 
         /*step3: nullspace to calc the H*/
         MatrixXd Ai;
+        cout << "***Before NullSpace***" << endl;
+        cout << "Hfi.size = " << Hfi.rows() << " x " << Hfi.cols() << endl;
+
         nullSpace(Hfi, Ai);
+        cout << "Ai.size() = " << Ai.rows() << " x " << Ai.cols() << endl;
         roi = Ai.transpose() * ri;
         Hoi = Ai.transpose() * Hxi;
+        cout << "Ai * Ai.t = \n" << Ai.transpose() * Ai << endl;
+        cout << "roi.size() = " << roi.rows() << " x " << roi.cols() << endl;
+        cout << "Hoi.size() = " << Hoi.rows() << " x " << Hoi.cols() << endl;
 
         /* step4: Outiler Detection
          * method: Chi-square test
@@ -677,8 +688,8 @@ void MSCKF::CalcHxAndHf(Matrix4d &Tcw,
                         Vector3d &pw,
                         Matrix<double, 2,9> &Hbi,
                         Matrix<double, 2,3> &Hfi,
-                        Vector2d zij,
-                        Vector2d rij)
+                        Vector2d &zij,
+                        Vector2d &rij)
 {
     /*step1: translate the point_i_3d to the current j frame cj_p_fi*/
     Matrix3d Rcw = Tcw.block<3,3>(0,0);
@@ -719,6 +730,9 @@ void MSCKF::CalcHxAndHf(Matrix4d &Tcw,
 
     /*step3 -> calc ri*/
     /*Actually rij is not calc like this.*/
+    cout << "  rij = \n" << rij << endl;
+    cout << "  zij = \n" << zij << endl;
+    cout << "z_hat = \n" << z_hat << endl;
     rij = zij - z_hat;
 }
 
@@ -728,7 +742,7 @@ void MSCKF::nullSpace(MatrixXd &H, MatrixXd &A)
     int n = H.rows() /2;
 
     JacobiSVD<MatrixXd> svd(H, ComputeFullU);
-    A = svd.matrixU().rightCols(2*n-3).transpose();
+    A = svd.matrixU().rightCols(2*n-3);
 }
 
 bool MSCKF::ChiSquareTest(MatrixXd &Hoi, MatrixXd &roi, MatrixXd &covariance)
