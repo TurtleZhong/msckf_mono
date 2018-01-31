@@ -165,10 +165,10 @@ void MSCKF::propagateIMU(Vector3d linear_acceleration, Vector3d angular_velocity
     Matrix<double, 15, 15> Nc;
     Matrix<double, 15, 1> Nc_diag;
     Nc_diag <<
-               mIMUParams.sigma_gc*mIMUParams.sigma_gc * Vector3d(1, 1, 1),Vector3d(0, 0, 0),
-            mIMUParams.sigma_ac*mIMUParams.sigma_ac * Vector3d(1, 1, 1),
-            mIMUParams.sigma_wgc*mIMUParams.sigma_wgc * Vector3d(1, 1, 1),
-            mIMUParams.sigma_wac*mIMUParams.sigma_wac * Vector3d(1, 1, 1);
+               mIMUParams.sigma_gc *mIMUParams.sigma_gc * Vector3d(1, 1, 1),Vector3d(0, 0, 0),
+               mIMUParams.sigma_ac *mIMUParams.sigma_ac * Vector3d(1, 1, 1),
+               mIMUParams.sigma_wgc*mIMUParams.sigma_wgc * Vector3d(1, 1, 1),
+               mIMUParams.sigma_wac*mIMUParams.sigma_wac * Vector3d(1, 1, 1);
 
     Nc = Nc_diag.asDiagonal();
 
@@ -240,8 +240,9 @@ void MSCKF::Augmentation()
     mState.conservativeResize(stateSize + 10);
 
     mState.segment<10>(stateSize) = mState.head(10);
-
-
+//    cout << "***In argumation***" << endl;
+//    cout << "mCovariance.size = " << mCovariance.rows() << "x" << mCovariance.cols() << endl;
+//    cout << "mCovariance = \n" << mCovariance << endl;
 
     /*step2: augmente the covariance
      * It should be noted that in step 1 we have add an image
@@ -259,7 +260,7 @@ void MSCKF::Augmentation()
     mCovariance.block(0, covSize,covSize,9) = mCovariance.block(0,0,covSize,covSize)*Jpi.transpose();
 
     mCovariance.block(covSize,0,9,covSize) = mCovariance.block(0, covSize,covSize,9).transpose();
-    mCovariance.block(covSize,covSize,9,9) = Jpi*mCovariance.block(0, covSize,covSize,9);
+    mCovariance.block(covSize,covSize,9,9) = Jpi*mCovariance.block(0, 0,covSize,covSize) * Jpi.transpose();
 
 }
 
@@ -842,21 +843,28 @@ void MSCKF::Update(MatrixXd &H, VectorXd &rq, MatrixXd &TH)
 {
     cout << "***Update step***" << endl;
     cout << "rq = \n" << rq << endl;
-    int q = H.rows();
+    int q = TH.rows();
     MatrixXd Rq = MatrixXd::Identity(q,q);
     Rq = mCAMParams.sigma_img * mCAMParams.sigma_img * Rq;
     MatrixXd I_belta = MatrixXd::Identity(q,q);
 
     /*before update we need a check for row and col to ensure the mutiply*/
-    cout << "mCovariance = \n" << mCovariance << endl;
-    MatrixXd K = mCovariance * TH.transpose() *(TH * mCovariance * TH.transpose() + Rq).inverse();
-    mCovariance = (I_belta - K * TH) * mCovariance * (I_belta - K * TH).transpose() + K * Rq * K.transpose();
+//    cout << "mCovariance = \n" << mCovariance << endl;
+    const MatrixXd &P = mCovariance;
+    MatrixXd S = TH*P*TH.transpose() + Rq;
+//    MatrixXd K_transpose = S.ldlt().solve(TH*P);
+//    MatrixXd K = K_transpose.transpose();
+    MatrixXd K = mCovariance * TH.transpose() * S.inverse();
+    //mCovariance = (I_belta - K * TH) * mCovariance * (I_belta - K * TH).transpose() + K * Rq * K.transpose();
     MatrixXd delta = K * rq;
     VectorXd delta_x(delta);
     cout << "K.size = " << K.rows() << "x" << K.cols() << endl;
     cout << "K = \n" << K <<  endl;
-    cout << "delta_x = " << delta_x << endl;
-    cout << "mState = " << mState << endl;
+
+    cout << "Before update, mState = " << mState.segment<3>(4) << endl;
+
+    cout << "delta_x = \n" << delta_x.segment<3>(3) << endl;
+
     /*update*/
     Quaterniond Q(mState.segment<4>(0));
     Quaterniond dq(1, 0.5*delta_x(0), 0.5*delta_x(1), 0.5*delta_x(2));
@@ -865,7 +873,7 @@ void MSCKF::Update(MatrixXd &H, VectorXd &rq, MatrixXd &TH)
     mState.segment<3>(7) += delta_x.segment<3>(6);
     mState.segment<3>(10) += delta_x.segment<3>(9);
     mState.segment<3>(13) += delta_x.segment<3>(12);
-
+    cout << "After update, mState = " << mState.segment<3>(4) << endl;
     /*for cameras*/
     for(int i = 16; i < mState.size(); i+=10)
     {
@@ -876,6 +884,9 @@ void MSCKF::Update(MatrixXd &H, VectorXd &rq, MatrixXd &TH)
         mState.segment<3>(i+7) += delta_x.segment<3>(i+6);
     }
 
+    /*update the covariance*/
+    MatrixXd I_KH = MatrixXd::Identity(K.rows(), TH.cols()) - K*TH;
+    mCovariance = I_KH * mCovariance;
 
 }
 
