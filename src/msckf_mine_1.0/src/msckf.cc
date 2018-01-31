@@ -534,7 +534,7 @@ void MSCKF::CalcResidualsAndStackingIt()
     /*Ho and r is used for filter update step*/
 
     vector<MatrixXd> vH;
-    vector<MatrixXd> vr;
+    vector<VectorXd> vr;
 
     /*Ho and r is used for filter update step*/
 
@@ -595,7 +595,7 @@ void MSCKF::CalcResidualsAndStackingIt()
         MatrixXd Hxi = MatrixXd::Zero(2*num, 15+9*num);
         MatrixXd Hfi = MatrixXd::Zero(2*num, 3);
         VectorXd ri(2 * num);
-        MatrixXd roi;
+        VectorXd roi(2*num - 3);
         MatrixXd Hoi;
         VectorXd noise = VectorXd::Ones(2*num);
         MatrixXd ni(noise.asDiagonal());
@@ -755,7 +755,7 @@ bool MSCKF::ChiSquareTest(MatrixXd &Hoi, MatrixXd &roi, MatrixXd &covariance)
         return false;
 }
 
-void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr)
+void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<VectorXd> &vr)
 {
     /*stack H and r*/
     int vSize = vH.size();
@@ -764,6 +764,7 @@ void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr)
 
     colH = vH[0].cols();
     colr = vr[0].cols();
+    cout << "vSize = " << vSize << endl;
     vector<int> vRowH;
     vector<int> vRowr;
 
@@ -775,21 +776,27 @@ void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr)
         vRowH.push_back(rowH);
         vRowr.push_back(rowr);
     }
-
+    cout << "rowH, colH, rowr, colr = " << rowH << " " << colH << " " << rowr << " " << colr << " " << endl;
     MatrixXd H = MatrixXd::Zero(rowH, colH);
-    MatrixXd r = MatrixXd::Zero(rowr, colr);
+    VectorXd r = VectorXd::Zero(rowr);
 
     int tmpRowH = 0;
     int tmpRowr = 0;
 
-    cin.get();
+
+
+
     for(int i = 0; i < vSize; i++)
     {
-        H.block(tmpRowH, 0, vRowH[i], colH) = vH[i];
-        r.block(tmpRowr, 0, vRowr[i], colr) = vr[i];
+        H.block(tmpRowH, 0, vH[i].rows(), colH) = vH[i];
+        int rowi = vr[i].rows();
+        r.segment(tmpRowr, rowi)= vr[i];
         tmpRowH += vH[i].rows();
-        tmpRowr += vH[i].rows();
+        tmpRowr += vr[i].rows();
     }
+    cout << "r = \n" << r << endl;
+
+    cin.get();
 
 
     /*for now we have get H and r
@@ -797,8 +804,19 @@ void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr)
      */
 
     /*we need QR decomposition*/
-    MatrixXd rq, TH;
-    QRdecomposition(H, r, rq, TH);
+    MatrixXd TH;
+    VectorXd rq;
+    if(H.rows() > H.cols())
+    {
+        cout << BOLDCYAN << "***Use QR decomposition***" << WHITE << endl;
+        QRdecomposition(H, r, rq, TH);
+    }
+    else
+    {
+        rq = r;
+        TH = H;
+    }
+
 
     /*update step*/
     Update(H,rq,TH);
@@ -807,7 +825,7 @@ void MSCKF::MsckfUpdate(vector<MatrixXd> &vH, vector<MatrixXd> &vr)
 }
 
 
-void MSCKF::QRdecomposition(MatrixXd H, MatrixXd r, MatrixXd &rq, MatrixXd &TH)
+void MSCKF::QRdecomposition(MatrixXd H, VectorXd r, VectorXd &rq, MatrixXd &TH)
 {
     /*we need to QR decomposition*/
     HouseholderQR<MatrixXd> qr(H);
@@ -820,19 +838,25 @@ void MSCKF::QRdecomposition(MatrixXd H, MatrixXd r, MatrixXd &rq, MatrixXd &TH)
 
 }
 
-void MSCKF::Update(MatrixXd &H, MatrixXd &rq, MatrixXd &TH)
+void MSCKF::Update(MatrixXd &H, VectorXd &rq, MatrixXd &TH)
 {
+    cout << "***Update step***" << endl;
+    cout << "rq = \n" << rq << endl;
     int q = H.rows();
     MatrixXd Rq = MatrixXd::Identity(q,q);
     Rq = mCAMParams.sigma_img * mCAMParams.sigma_img * Rq;
     MatrixXd I_belta = MatrixXd::Identity(q,q);
 
     /*before update we need a check for row and col to ensure the mutiply*/
-    MatrixXd K = mCovariance * TH.transpose() *(TH * mCovariance * TH.transpose()).inverse();
+    cout << "mCovariance = \n" << mCovariance << endl;
+    MatrixXd K = mCovariance * TH.transpose() *(TH * mCovariance * TH.transpose() + Rq).inverse();
     mCovariance = (I_belta - K * TH) * mCovariance * (I_belta - K * TH).transpose() + K * Rq * K.transpose();
     MatrixXd delta = K * rq;
     VectorXd delta_x(delta);
-
+    cout << "K.size = " << K.rows() << "x" << K.cols() << endl;
+    cout << "K = \n" << K <<  endl;
+    cout << "delta_x = " << delta_x << endl;
+    cout << "mState = " << mState << endl;
     /*update*/
     Quaterniond Q(mState.segment<4>(0));
     Quaterniond dq(1, 0.5*delta_x(0), 0.5*delta_x(1), 0.5*delta_x(2));
