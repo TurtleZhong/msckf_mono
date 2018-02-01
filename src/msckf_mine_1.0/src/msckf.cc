@@ -13,6 +13,7 @@ MSCKF::MSCKF()
     mnFeatureId = 0;
     mnMaxLifeTime = Config::get<int>("Shi-Tomasi.maxLifeTime");
     mnSWFrameId = 0;
+    mnUpdateCount = 0;
 }
 
 MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, const Vector3d &Gyro, double &dt)
@@ -30,6 +31,7 @@ MSCKF::MSCKF(const VectorXd &state, const MatrixXd &P, const Vector3d &Acc, cons
     mbReset = true;
     mnMaxLifeTime = Config::get<int>("Shi-Tomasi.maxLifeTime");
     mnSWFrameId = 0;
+    mnUpdateCount = 0;
 
 }
 
@@ -302,13 +304,26 @@ void MSCKF::imageComing(const Mat &image, const double timestamp)
         /*if the image is not the first frame, we can tracking*/
         Tracking();
 
+
         /*after tracking, we got the features used for update*/
 
-        if(!mvFeaturesForUpdate.empty())
+        if(!mvFeaturesForUpdate.empty() && mnUpdateCount<2 && GetSlideWindowSize() > 2)
         {
+            mnUpdateCount++;
             cout << BOLDRED"***Ready to update the filter!***" << WHITE << endl;
             cout << BOLDRED"***Check the triangulation part***" << WHITE << endl;
             CalcResidualsAndStackingIt();
+        }
+        else if(mnUpdateCount >= 2)
+        {
+            /*Marginalize the filter*/
+            cout << BOLDRED"**************************" << endl;
+            cout << "Marginalize the filter" << endl;
+            cout <<        "**************************" << WHITE << endl;
+            Marginalizefilter();
+            mnUpdateCount = 0;
+            mnSWFrameId = mCurrFrame.mnId;
+            cout << "mnSWFrameId = " << mCurrFrame.mnId << endl;
         }
 
     }
@@ -538,22 +553,27 @@ void MSCKF::CalcResidualsAndStackingIt()
     vector<VectorXd> vr;
 
     /*Ho and r is used for filter update step*/
-
+    int feature_num = 0;
     for(int i = 0; i < mvFeaturesForUpdate.size(); i++)
     {
+
         cout << "Slide window size is: " << GetSlideWindowSize() << endl;
         /*the ith lost feature or the ith feature used for update*/
 
-        vector<Vector2d> z_observation = mvFeaturesForUpdate[i].mvObservation;
+        vector<Vector2d> z_observation;
+
         VectorOfPose poses;
 
         /*num -> the num of observation of ith feature*/
+        /**********************************************/
+        /*          Very importment!!!                */
+        /**********************************************/
         int num = mvFeaturesForUpdate[i].mvObservation.size();
 
         /*featureFrameId -> the feature first observed in which frame*/
         unsigned int featureFrameId = mvFeaturesForUpdate[i].mnFrameId;
 
-        for(int j = 0; j < num; j++)
+        for(int j = 0; j < GetSlideWindowSize() - 1; j++)
         {
             /*this part we featch the 2d observation and the transition matrix
              * z_observation -> the ith feature's 2d measurement
@@ -565,9 +585,9 @@ void MSCKF::CalcResidualsAndStackingIt()
             /*but we only get the state from the mstate*/
 
             Pose pose;
-            Quaterniond qwb = Quaterniond( mState.segment<4>(16 + 10*(featureFrameId - mnSWFrameId + j)));
+            Quaterniond qwb = Quaterniond( mState.segment<4>(16 + 10*(j)));
             Matrix3d Rwb = qwb.toRotationMatrix();
-            Vector3d twb = mState.segment<3>(16 + 10*(featureFrameId - mnSWFrameId + j) + 4);
+            Vector3d twb = mState.segment<3>(16 + 10*(j) + 4);
             Matrix4d Twb = Matrix4d::Identity();
             Twb.block<3,3>(0,0) = Rwb;
             Twb.block<3,1>(0,3) = twb;
@@ -576,6 +596,7 @@ void MSCKF::CalcResidualsAndStackingIt()
             pose.q = Quaterniond(Tcw.block<3,3>(0,0));
             pose.t = Tcw.block<3,1>(0,3);
             poses.push_back(pose);
+            z_observation.push_back(mvFeaturesForUpdate[i].mvObservation[num - GetSlideWindowSize() + 1]);
 
         }
 
@@ -590,19 +611,19 @@ void MSCKF::CalcResidualsAndStackingIt()
         /*cf.53 6.5.2 Error Representation Monocular Visual Inertial Odometry on a Mobile Device*/
 
         Matrix<double, 2,9> Hbij;
-        MatrixXd Hxij = MatrixXd::Zero(2, 15+9*num);
+        MatrixXd Hxij = MatrixXd::Zero(2, 15+9*(GetSlideWindowSize() - 1));
         Matrix<double, 2,3> Hfij;
         Vector2d rij;
-        MatrixXd Hxi = MatrixXd::Zero(2*num, 15+9*num);
-        MatrixXd Hfi = MatrixXd::Zero(2*num, 3);
-        VectorXd ri(2 * num);
-        VectorXd roi(2*num - 3);
+        MatrixXd Hxi = MatrixXd::Zero(2*(GetSlideWindowSize() - 1), 15+9*(GetSlideWindowSize() - 1));
+        MatrixXd Hfi = MatrixXd::Zero(2*(GetSlideWindowSize() - 1), 3);
+        VectorXd ri(2 * (GetSlideWindowSize() - 1));
+        VectorXd roi(2*(GetSlideWindowSize() - 1) - 3);
         MatrixXd Hoi;
-        VectorXd noise = VectorXd::Ones(2*num);
+        VectorXd noise = VectorXd::Ones(2*(GetSlideWindowSize() - 1));
         MatrixXd ni(noise.asDiagonal());
 //        MatrixXd ni = MatrixXd::Identity(2*num);
 
-        for(int j = 0; j < num; j++)
+        for(int j = 0; j < GetSlideWindowSize() - 1; j++)
         {
             /*compute the Hxi and Hfi
              * Hxi = Hzjfi * Hfix
@@ -674,6 +695,12 @@ void MSCKF::CalcResidualsAndStackingIt()
         /*after triangulation we need clear the buff*/
         z_observation.clear();
         poses.clear();
+
+        feature_num++;
+        if(feature_num >4 || i > mvFeaturesForUpdate.size())
+        {
+            break;
+        }
     }
 
     /*after the lost features loop*/
