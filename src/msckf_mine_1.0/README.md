@@ -1,6 +1,7 @@
 # This is a simple example of MSCKF
 
 ## Change Log
+2018.02.05 Almost Done, But still many many bugs. The code can only run 10 frame then the update step seems wrong. 
 2017.12.16 Finish the feature tracking and ready to realize the Feature Manager test! the test video can be found [here](https://youtu.be/Nr3VIoFZAhs). 
 
 # 1.Description
@@ -30,8 +31,10 @@ cmake ..
 make
 
 # 5. How to run
-####Then in the bin folder run:
-
+#### Firstly
+you need use the python script to translate the csv file to the txt file.
+#### Then in the bin folder run:
+./frame_with_imu_test
 
 then you will get result in result/
 

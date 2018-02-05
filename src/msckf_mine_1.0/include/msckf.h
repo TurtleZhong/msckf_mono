@@ -106,6 +106,7 @@ public:
     void nullSpace(MatrixXd &H, MatrixXd &A);
     bool ChiSquareTest(MatrixXd &Hoi, MatrixXd &roi, MatrixXd &covariance);
 
+    int mnUpdateCount;
     void MsckfUpdate(vector<MatrixXd> &vH, vector<VectorXd> &vr);
     void QRdecomposition(MatrixXd H, VectorXd r, VectorXd &rq, MatrixXd &TH);
     void Update(MatrixXd &H, VectorXd &rq, MatrixXd &TH);

@@ -27,6 +27,7 @@ class CAMERA
 public:
     double time_stamp;
     string img_name;
+    string img_name1;
 };
 
 

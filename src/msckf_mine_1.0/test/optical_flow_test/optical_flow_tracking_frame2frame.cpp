@@ -33,7 +33,28 @@ int main(int argc, char *argv[])
 
     for(vector<CAMERA>::iterator iter_cam = vCamera.begin(); iter_cam!=vCamera.end(); iter_cam++)
     {
-        Mat image = imread(iter_cam->img_name,CV_LOAD_IMAGE_GRAYSCALE);
+        Mat image = imread(iter_cam->img_name, CV_LOAD_IMAGE_GRAYSCALE);
+        image.convertTo(image, CV_8UC1);
+        std::vector<cv::Mat> image_pyramid;
+        buildOpticalFlowPyramid(image, image_pyramid, Size(15,15), 3, true,
+                                BORDER_REFLECT_101, BORDER_CONSTANT, false);
+        cv::imshow("image_origin", image);
+        cv::waitKey(0);
+        cout << image_pyramid.size() << endl;
+        for(int i = 0; i < image_pyramid.size(); i++)
+        {
+            if (i % 2 == 0)
+            {
+                cout << image_pyramid[i].type() << endl;
+                cv::imshow("pyrmid", Mat(image_pyramid[i]));
+                cv::waitKey(0);
+            }
+
+
+
+
+        }
+
 
         /*Extract the first frame!*/
 
@@ -44,21 +65,21 @@ int main(int argc, char *argv[])
             feedImage = image;
             lastImage = image;
             goodFeaturesToTrack( image,
-                         corners,
-                         maxCorners,
-                         qualityLevel,
-                         minDistance,
-                         Mat(),
-                         blockSize,
-                         useHarrisDetector,
-                         k );
+                                 corners,
+                                 maxCorners,
+                                 qualityLevel,
+                                 minDistance,
+                                 Mat(),
+                                 blockSize,
+                                 useHarrisDetector,
+                                 k );
 
             /// Draw corners detected
             cout<<"** Number of corners detected: "<<corners.size()<<endl;
             cvtColor(image,image,CV_GRAY2BGR);
             int r = 4;
             for( int i = 0; i < corners.size(); i++ )
-               { circle( image, corners[i], r, Scalar(0,255,0), -1, 8, 0 ); }
+            { circle( image, corners[i], r, Scalar(0,255,0), -1, 8, 0 ); }
 
 
 
@@ -95,9 +116,9 @@ int main(int argc, char *argv[])
                     corners_before.push_back(corners_after[i]);
                     j++;
 
-//                    cv::circle( currentImage, corners[i], 2, Scalar(0,255,0), -1, 8, 0 );
+                    //                    cv::circle( currentImage, corners[i], 2, Scalar(0,255,0), -1, 8, 0 );
                     cv::circle( currentImage, corners_after[i], 3, Scalar(0,0,255), -1, 8, 0 );
-//                    cv::line(currentImage,corners[i],corners_after[i],Scalar(0,255,255),1,8,0);
+                    //                    cv::line(currentImage,corners[i],corners_after[i],Scalar(0,255,255),1,8,0);
                 }
             }
             cv::imshow("Tracking", currentImage);

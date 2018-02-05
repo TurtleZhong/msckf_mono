@@ -55,6 +55,7 @@ ${PROJECT_SOURCE_DIR}/include
 ${PROJECT_SOURCE_DIR}/test
 ${PROJECT_SOURCE_DIR}/test/optical_flow_test
 ${PROJECT_SOURCE_DIR}/test/frame_test
+${PROJECT_SOURCE_DIR}/test/msckf_vio_stereo_test
 ${EIGEN3_INCLUDE_DIR}
 )
 
@@ -126,5 +127,11 @@ target_link_libraries(frame_test ${PROJECT_NAME})
 
 add_executable(frame_with_imu_test test/frame_test/frame_with_imu_test.cpp )
 target_link_libraries(frame_with_imu_test ${PROJECT_NAME})
+
+add_executable(eigen_function_test test/frame_test/eigen_function_test.cpp )
+target_link_libraries(eigen_function_test ${PROJECT_NAME})
+
+add_executable(fast_feature_detect test/msckf_vio_stereo_test/fast_feature_detect.cpp )
+target_link_libraries(fast_feature_detect ${PROJECT_NAME})
 
 

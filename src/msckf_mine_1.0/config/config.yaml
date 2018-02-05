@@ -34,7 +34,7 @@ g: 9.81
 # goodFeaturesToTrack Params
 #--------------------------------------------------------------------------------------------
 
-Shi-Tomasi.maxCorners: 300
+Shi-Tomasi.maxCorners: 200
 Shi-Tomasi.qualityLevel: 0.01
 Shi-Tomasi.minDistance: 20
 Shi-Tomasi.blockSize: 10
