@@ -1,6 +1,7 @@
 #ifndef IMAGE_PROCESSOR_H
 #define IMAGE_PROCESSOR_H
 #include "common_include.h"
+#include "config.h"
 
 namespace MSCKF_MINE
 {

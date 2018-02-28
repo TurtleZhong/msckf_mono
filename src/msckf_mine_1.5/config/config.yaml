@@ -1,9 +1,9 @@
 %YAML:1.0
 
 # path
-sequence_dir: ../datasets/MH_01_easy/mav0/
-imu_path: ../datasets/MH_01_easy/mav0/imu0/data.txt
-camera_path: ../datasets/MH_01_easy/mav0/cam0/data.txt
+sequence_dir: ../datasets/V2_01_easy/mav0/
+imu_path: ../datasets/V2_01_easy/mav0/imu0/data.txt
+camera_path: ../datasets/V2_01_easy/mav0/cam0/data.txt
 
 # Sensor extrinsics wrt. the body-frame.
 T_BS: "0.0148655429818 -0.999880929698 0.00414029679422 -0.0216401454975 0.999557249008 0.0149672133247 0.025715529948 -0.064676986768 -0.0257744366974 0.00375618835797 0.999660727178 0.00981073058949 0.0 0.0 0.0 1.0"
@@ -16,10 +16,15 @@ Camera.cx: 367.215
 Camera.cy: 248.375
 
 # distortion_coefficients
+Camera.distortion.model: radtan
 Camera.k1: -0.28340811
 Camera.k2: 0.07395907
 Camera.p1: 0.00019359
 Camera.p2: 1.76187114e-05
+
+
+Camera.resolution.x: 752
+Camera.resolution.y: 480
 
 sigma_img: 0.1
 
@@ -42,30 +47,44 @@ Shi-Tomasi.useHarrisDetector: false
 Shi-Tomasi.k: 0.04
 Shi-Tomasi.maxLifeTime: 15 
 
+grid_row: 4
+grid_col: 5
+grid_min_feature_num: 3
+grid_max_feature_num: 4
+pyramid_levels: 3
+patch_size: 15
+fast_threshold: 10
+max_iteration: 30
+track_precision: 0.01
+ransac_threshold: 3
+stereo_threshold: 5
+
+max_cam_state_size: 20
+position_std_threshold: 8.0
+
+rotation_threshold: 0.2618
+translation_threshold: 0.4
+tracking_rate_threshold: 0.5
+
+# <!-- Feature optimization config -->
 
 
+# <!-- These values should be standard deviation -->
+noise.gyro: 0.005
+noise.acc: 0.05
+noise.gyro_bias: 0.001
+noise.acc_bias: 0.01
+noise.feature: 0.035
 
-#--------------------------------------------------------------------------------------------
-# ORB Parameters
-#--------------------------------------------------------------------------------------------
+initial_state_velocity.x: 0.0
+initial_state_velocity.y: 0.0
+initial_state_velocity.z: 0.0
 
-# ORB Extractor: Number of features per image, only use when reset
-ORBextractor.nFeaturesInit: 1000
-
-# ORB Extractor: Number of features per image 
-ORBextractor.nFeatures: 600
-
-# ORB Extractor: Scale factor between levels in the scale pyramid 	
-ORBextractor.scaleFactor: 1.2
-
-# ORB Extractor: Number of levels in the scale pyramid	
-ORBextractor.nLevels: 4
-
-# ORB Extractor: Fast threshold
-# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
-# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFASTs		
-ORBextractor.iniThFAST: 20
-ORBextractor.minThFAST: 7
-
+# <!-- These values should be covariance -->
+initial_covariance.velocity: 0.25
+initial_covariance.gyro_bias: 0.01
+initial_covariance.acc_bias: 0.01
+initial_covariance.extrinsic_rotation_cov: 3.0462e-4
+initial_covariance.extrinsic_translation_cov: 2.5e-5
 
 
