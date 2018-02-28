@@ -25,6 +25,7 @@ namespace MSCKF_MINE
         {
             return T(Config::config_->file_[key]);
         }
+        Mat GetTbs();
 
     };
 }

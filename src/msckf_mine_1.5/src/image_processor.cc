@@ -37,82 +37,73 @@ bool ImageProcessor::loadParameters() {
   cam0_distortion_coeffs[2] = Config::get<double>("Camera.p1");
   cam0_distortion_coeffs[3] = Config::get<double>("Camera.p2");
 
-  cv::Mat     T_imu_cam0 = utils::getTransformCV(nh, "cam0/T_cam_imu");
+  cv::Mat     T_imu_cam0 = Config::GetTbs().inv();
   cv::Matx33d R_imu_cam0(T_imu_cam0(cv::Rect(0,0,3,3)));
   cv::Vec3d   t_imu_cam0 = T_imu_cam0(cv::Rect(3,0,1,3));
   R_cam0_imu = R_imu_cam0.t();
   t_cam0_imu = -R_imu_cam0.t() * t_imu_cam0;
 
   // Processor parameters
-  nh.param<int>("grid_row", processor_config.grid_row, 4);
-  nh.param<int>("grid_col", processor_config.grid_col, 4);
-  nh.param<int>("grid_min_feature_num",
-      processor_config.grid_min_feature_num, 2);
-  nh.param<int>("grid_max_feature_num",
-      processor_config.grid_max_feature_num, 4);
-  nh.param<int>("pyramid_levels",
-      processor_config.pyramid_levels, 3);
-  nh.param<int>("patch_size",
-      processor_config.patch_size, 31);
-  nh.param<int>("fast_threshold",
-      processor_config.fast_threshold, 20);
-  nh.param<int>("max_iteration",
-      processor_config.max_iteration, 30);
-  nh.param<double>("track_precision",
-      processor_config.track_precision, 0.01);
-  nh.param<double>("ransac_threshold",
-      processor_config.ransac_threshold, 3);
-  nh.param<double>("stereo_threshold",
-      processor_config.stereo_threshold, 3);
+  processor_config.grid_row = Config::get<int>("grid_row");
+  processor_config.grid_col = Config::get<int>("grid_col");
+  processor_config.grid_min_feature_num =
+          Config::get<int>("grid_min_feature_num");
+  processor_config.grid_max_feature_num =
+          Config::get<int>("grid_max_feature_num");
+  processor_config.pyramid_levels =
+          Config::get<int>("pyramid_levels");
+  processor_config.patch_size =
+          Config::get<int>("processor_config.patch_size");
+  processor_config.fast_threshold =
+          Config::get<int>("processor_config.fast_threshold");
+  processor_config.max_iteration =
+          Config::get<int>("processor_config.max_iteration");
+  processor_config.track_precision =
+          Config::get<double>("processor_config.track_precision");
+  processor_config.ransac_threshold =
+          Config::get<double>("processor_config.ransac_threshold");
+  processor_config.stereo_threshold =
+          Config::get<double>("processor_config.stereo_threshold");
 
-  ROS_INFO("===========================================");
-  ROS_INFO("cam0_resolution: %d, %d",
-      cam0_resolution[0], cam0_resolution[1]);
-  ROS_INFO("cam0_intrinscs: %f, %f, %f, %f",
-      cam0_intrinsics[0], cam0_intrinsics[1],
-      cam0_intrinsics[2], cam0_intrinsics[3]);
-  ROS_INFO("cam0_distortion_model: %s",
-      cam0_distortion_model.c_str());
-  ROS_INFO("cam0_distortion_coefficients: %f, %f, %f, %f",
-      cam0_distortion_coeffs[0], cam0_distortion_coeffs[1],
-      cam0_distortion_coeffs[2], cam0_distortion_coeffs[3]);
 
-  ROS_INFO("cam1_resolution: %d, %d",
-      cam1_resolution[0], cam1_resolution[1]);
-  ROS_INFO("cam1_intrinscs: %f, %f, %f, %f",
-      cam1_intrinsics[0], cam1_intrinsics[1],
-      cam1_intrinsics[2], cam1_intrinsics[3]);
-  ROS_INFO("cam1_distortion_model: %s",
-      cam1_distortion_model.c_str());
-  ROS_INFO("cam1_distortion_coefficients: %f, %f, %f, %f",
-      cam1_distortion_coeffs[0], cam1_distortion_coeffs[1],
-      cam1_distortion_coeffs[2], cam1_distortion_coeffs[3]);
+  cout << "===========================================" << endl;
+  cout << "cam0_resolution: " <<
+          cam0_resolution[0] << ", " << cam0_resolution[1] << endl;
 
+  cout << "cam0_intrinscs: " <<
+          cam0_intrinsics[0] << ", " << cam0_intrinsics[1] << ", " <<
+          cam0_intrinsics[2] << ", " << cam0_intrinsics[3] << endl;
+  cout << "cam0_distortion_model: " << cam0_distortion_model.c_str() << endl;
+  cout << "cam0_distortion_coefficients: " <<
+          cam0_distortion_coeffs[0] << ", " << cam0_distortion_coeffs[1] << ", " <<
+          cam0_distortion_coeffs[2] << ", " << cam0_distortion_coeffs[3] << endl;
+
+  cout << "Transform Matrix: from IMU to CAM0" << endl;
   cout << R_imu_cam0 << endl;
   cout << t_imu_cam0.t() << endl;
 
-  ROS_INFO("grid_row: %d",
-      processor_config.grid_row);
-  ROS_INFO("grid_col: %d",
-      processor_config.grid_col);
-  ROS_INFO("grid_min_feature_num: %d",
-      processor_config.grid_min_feature_num);
-  ROS_INFO("grid_max_feature_num: %d",
-      processor_config.grid_max_feature_num);
-  ROS_INFO("pyramid_levels: %d",
-      processor_config.pyramid_levels);
-  ROS_INFO("patch_size: %d",
-      processor_config.patch_size);
-  ROS_INFO("fast_threshold: %d",
-      processor_config.fast_threshold);
-  ROS_INFO("max_iteration: %d",
-      processor_config.max_iteration);
-  ROS_INFO("track_precision: %f",
-      processor_config.track_precision);
-  ROS_INFO("ransac_threshold: %f",
-      processor_config.ransac_threshold);
-  ROS_INFO("stereo_threshold: %f",
-      processor_config.stereo_threshold);
+  cout << "grid_row: " <<
+          processor_config.grid_row << endl;
+  cout << "grid_col: " <<
+          processor_config.grid_col << endl;
+  cout << "grid_min_feature_num: " <<
+          processor_config.grid_min_feature_num << endl;
+  cout << "grid_max_feature_num: " <<
+          processor_config.grid_max_feature_num << endl;
+  cout << "pyramid_levels: " <<
+          processor_config.pyramid_levels << endl;
+  cout << "patch_size: " <<
+          processor_config.patch_size << endl;
+  cout << "fast_threshold: " <<
+          processor_config.fast_threshold << endl;
+  cout << "max_iteration: " <<
+          processor_config.max_iteration << endl;
+  cout << "track_precision: " <<
+          processor_config.track_precision << endl;
+  cout << "ransac_threshold: " <<
+          processor_config.ransac_threshold << endl;
+  cout << "stereo_threshold: " <<
+          processor_config.stereo_threshold << endl;
   ROS_INFO("===========================================");
   return true;
 }

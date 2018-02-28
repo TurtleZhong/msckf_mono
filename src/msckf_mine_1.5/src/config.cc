@@ -26,6 +26,25 @@ namespace MSCKF_MINE
         }
     }
 
+    Mat Config::GetTbs()
+    {
+        /*Tbs*/
+        string Tbs = this->get<string>("T_BS");
+        //cout << BOLDCYAN"Camera.Tbs = " << Tbs << WHITE << endl;
+
+        stringstream ss(Tbs);
+        Mat tbs(4,4,CV_64F);
+        for(int i = 0; i <4; i++)
+        {
+            for(int j = 0; j < 4; j++)
+            {
+                ss >> tbs.at<double>(i,j);
+            }
+        }
+
+        return tbs.clone();
+    }
+
     shared_ptr<Config> Config::config_ = nullptr;
 }
 
