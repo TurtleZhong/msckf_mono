@@ -1,0 +1,9 @@
+<library path="lib/libimage_processor_nodelet">
+  <class name="msckf_mono/ImageProcessorNodelet"
+         type="msckf_mono::ImageProcessorNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description>
+      Detect and track features in image sequence.
+    </description>
+  </class>
+</library>

@@ -143,6 +143,33 @@ include_directories(
   ${SUITESPARSE_INCLUDE_DIRS}
 )
 
+# Image processor
+add_library(image_processor
+  src/image_processor.cpp
+  src/utils.cpp
+)
+add_dependencies(image_processor
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(image_processor
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+
+# Image processor nodelet
+add_library(image_processor_nodelet
+  src/image_processor_nodelet.cpp
+)
+add_dependencies(image_processor_nodelet
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(image_processor_nodelet
+  image_processor
+  ${catkin_LIBRARIES}
+)
+
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/msckf_mono.cpp
