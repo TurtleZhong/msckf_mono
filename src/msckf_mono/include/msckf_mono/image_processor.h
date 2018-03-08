@@ -72,7 +72,7 @@ private:
       float response;
       int lifetime;
       cv::Point2f cam0_point;
-      cv::Point2f cam1_point;
+//      cv::Point2f cam1_point;
     };
 
     /*
@@ -143,6 +143,26 @@ private:
      */
     void imuCallback(const sensor_msgs::ImuConstPtr& msg);
 
+    /*
+     * @brief createImagePyramids
+     *    Create image pyramids used for klt tracking.
+     */
+    void createImagePyramids();
+
+    /*
+     * @initializeFirstFrame
+     *    Initialize the image processing sequence, which is
+     *    bascially detect new features on the first image.
+     */
+    void initializeFirstFrame();
+
+    /*
+     * @brief drawFeaturesMono
+     *    Draw tracked and newly detected features on the left
+     *    image only.
+     */
+    void drawFeaturesMono();
+
     // Indicate if this is the first image message.
     bool is_first_img;
 
@@ -162,10 +182,10 @@ private:
     cv::Vec4d cam0_intrinsics;
     cv::Vec4d cam0_distortion_coeffs;
 
-    std::string cam1_distortion_model;
-    cv::Vec2i cam1_resolution;
-    cv::Vec4d cam1_intrinsics;
-    cv::Vec4d cam1_distortion_coeffs;
+//    std::string cam1_distortion_model;
+//    cv::Vec2i cam1_resolution;
+//    cv::Vec4d cam1_intrinsics;
+//    cv::Vec4d cam1_distortion_coeffs;
 
     // Take a vector from cam0 frame to the IMU frame.
     cv::Matx33d R_cam0_imu;
@@ -182,7 +202,7 @@ private:
     // Pyramids for previous and current image
     std::vector<cv::Mat> prev_cam0_pyramid_;
     std::vector<cv::Mat> curr_cam0_pyramid_;
-    std::vector<cv::Mat> curr_cam1_pyramid_;
+//    std::vector<cv::Mat> curr_cam1_pyramid_;
 
     // Features in the previous and current image.
     boost::shared_ptr<GridFeatures> prev_features_ptr;
