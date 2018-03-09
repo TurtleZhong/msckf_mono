@@ -183,13 +183,6 @@ void ImageProcessor::monoCallback(
 
     if(is_first_img)
     {
-        /*Eigen test*/
-        AngleAxisd rotation_vector(M_PI/4, Vector3d(0,0,1));
-        cout << rotation_vector.matrix() << endl;
-        Vec3d r_v(0, 0, M_PI/4);
-        Matx33d r;
-        Rodrigues(r_v, r);
-        cout << r << endl;
         // Detect features in the first frame
         initializeFirstFrame();
         is_first_img = false;
@@ -198,6 +191,8 @@ void ImageProcessor::monoCallback(
     {
         // Track the feature in the previous image.
         ROS_INFO("Need to track the features");
+        trackFeatures();
+
         drawFeaturesMono();
     }
 
@@ -424,6 +419,48 @@ void ImageProcessor::trackFeatures()
                    cam0_R_p_c, cam0_intrinsics, cam0_distortion_model,
                    cam0_distortion_coeffs, processor_config.ransac_threshold,
                    0.99, cam0_ransac_inliers);
+
+    // Number of features after ransac.
+    after_ransac = 0;
+
+    for (int i = 0; i < cam0_ransac_inliers.size(); ++i)
+    {
+      if (cam0_ransac_inliers[i] == 0) continue;
+      int row = static_cast<int>(
+          curr_tracked_cam0_points[i].y / grid_height);
+      int col = static_cast<int>(
+          curr_tracked_cam0_points[i].x / grid_width);
+      int code = row*processor_config.grid_col + col;
+      (*curr_features_ptr)[code].push_back(FeatureMetaData());
+
+      FeatureMetaData& grid_new_feature = (*curr_features_ptr)[code].back();
+      grid_new_feature.id = prev_tracked_ids[i];
+      grid_new_feature.lifetime = ++prev_tracked_lifetime[i];
+      grid_new_feature.cam0_point = curr_tracked_cam0_points[i];
+
+      ++after_ransac;
+    }
+    // Compute the tracking rate.
+    int prev_feature_num = 0;
+    for (const auto& item : *prev_features_ptr)
+      prev_feature_num += item.second.size();
+
+    int curr_feature_num = 0;
+    for (const auto& item : *curr_features_ptr)
+      curr_feature_num += item.second.size();
+
+//    ROS_INFO_THROTTLE(0.5,
+//        "\033[0;32m candidates: %d; track: %d; ransac: %d/%d=%f\033[0m",
+//        before_tracking, after_tracking,
+//        curr_feature_num, prev_feature_num,
+//        static_cast<double>(curr_feature_num)/
+//        (static_cast<double>(prev_feature_num)+1e-5));
+    ROS_INFO("\033[0;32m candidates: %d; track: %d; ransac: %d/%d=%f\033[0m",
+        before_tracking, after_tracking,
+        curr_feature_num, prev_feature_num,
+        static_cast<double>(curr_feature_num)/
+        (static_cast<double>(prev_feature_num)+1e-5));
+    return;
 }
 
 void ImageProcessor::integrateImuData(Matx33f& cam0_R_p_c)
@@ -737,10 +774,99 @@ void ImageProcessor::twoPointRansac(
     for (const auto& inlier_idx : best_inlier_set)
         inlier_markers[inlier_idx] = 1;
 
-    //printf("inlier ratio: %lu/%lu\n",
-    //    best_inlier_set.size(), inlier_markers.size());
+//    printf("inlier ratio: %lu/%lu\n",
+//        best_inlier_set.size(), inlier_markers.size());
 
     return;
+}
+
+void ImageProcessor::rescalePoints(
+    vector<Point2f>& pts1, vector<Point2f>& pts2,
+    float& scaling_factor) {
+
+  scaling_factor = 0.0f;
+
+  for (int i = 0; i < pts1.size(); ++i) {
+    scaling_factor += sqrt(pts1[i].dot(pts1[i]));
+    scaling_factor += sqrt(pts2[i].dot(pts2[i]));
+  }
+
+  scaling_factor = (pts1.size()+pts2.size()) /
+    scaling_factor * sqrt(2.0f);
+
+  for (int i = 0; i < pts1.size(); ++i) {
+    pts1[i] *= scaling_factor;
+    pts2[i] *= scaling_factor;
+  }
+
+  return;
+}
+
+void ImageProcessor::undistortPoints(
+    const vector<cv::Point2f>& pts_in,
+    const cv::Vec4d& intrinsics,
+    const string& distortion_model,
+    const cv::Vec4d& distortion_coeffs,
+    vector<cv::Point2f>& pts_out,
+    const cv::Matx33d &rectification_matrix,
+    const cv::Vec4d &new_intrinsics) {
+
+  if (pts_in.size() == 0) return;
+
+  const cv::Matx33d K(
+      intrinsics[0], 0.0, intrinsics[2],
+      0.0, intrinsics[1], intrinsics[3],
+      0.0, 0.0, 1.0);
+
+  const cv::Matx33d K_new(
+      new_intrinsics[0], 0.0, new_intrinsics[2],
+      0.0, new_intrinsics[1], new_intrinsics[3],
+      0.0, 0.0, 1.0);
+
+  if (distortion_model == "radtan") {
+    cv::undistortPoints(pts_in, pts_out, K, distortion_coeffs,
+                        rectification_matrix, K_new);
+  } else if (distortion_model == "equidistant") {
+    cv::fisheye::undistortPoints(pts_in, pts_out, K, distortion_coeffs,
+                                 rectification_matrix, K_new);
+  } else {
+    ROS_WARN_ONCE("The model %s is unrecognized, use radtan instead...",
+                  distortion_model.c_str());
+    cv::undistortPoints(pts_in, pts_out, K, distortion_coeffs,
+                        rectification_matrix, K_new);
+  }
+
+  return;
+}
+
+vector<cv::Point2f> ImageProcessor::distortPoints(
+    const vector<cv::Point2f>& pts_in,
+    const cv::Vec4d& intrinsics,
+    const string& distortion_model,
+    const cv::Vec4d& distortion_coeffs) {
+
+  const cv::Matx33d K(intrinsics[0], 0.0, intrinsics[2],
+                      0.0, intrinsics[1], intrinsics[3],
+                      0.0, 0.0, 1.0);
+
+  vector<cv::Point2f> pts_out;
+  if (distortion_model == "radtan") {
+    vector<cv::Point3f> homogenous_pts;
+    cv::convertPointsToHomogeneous(pts_in, homogenous_pts);
+    cv::projectPoints(homogenous_pts, cv::Vec3d::zeros(), cv::Vec3d::zeros(), K,
+                      distortion_coeffs, pts_out);
+  } else if (distortion_model == "equidistant") {
+    cv::fisheye::distortPoints(pts_in, pts_out, K, distortion_coeffs);
+  } else {
+    ROS_WARN_ONCE("The model %s is unrecognized, using radtan instead...",
+                  distortion_model.c_str());
+    vector<cv::Point3f> homogenous_pts;
+    cv::convertPointsToHomogeneous(pts_in, homogenous_pts);
+    cv::projectPoints(homogenous_pts, cv::Vec3d::zeros(), cv::Vec3d::zeros(), K,
+                      distortion_coeffs, pts_out);
+  }
+
+  return pts_out;
 }
 
 void ImageProcessor::drawFeaturesMono()
@@ -796,7 +922,7 @@ void ImageProcessor::drawFeaturesMono()
                 curr_points.find(id) != curr_points.end()) {
             cv::Point2f prev_pt = prev_points[id];
             cv::Point2f curr_pt = curr_points[id];
-            circle(out_img, curr_pt, 3, tracked);
+            circle(out_img, curr_pt, 3, tracked, -1);
             line(out_img, prev_pt, curr_pt, tracked, 1);
 
             prev_points.erase(id);
@@ -811,7 +937,7 @@ void ImageProcessor::drawFeaturesMono()
     }
 
     imshow("Feature", out_img);
-    waitKey(0);
+    waitKey(27);
 }
 
 
