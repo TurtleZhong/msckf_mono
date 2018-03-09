@@ -157,11 +157,114 @@ private:
     void initializeFirstFrame();
 
     /*
+     * @brief trackFeatures
+     *    Tracker features on the newly received stereo images.
+     */
+    void trackFeatures();
+
+
+    /*
+     * @brief integrateImuData Integrates the IMU gyro readings
+     *    between the two consecutive images, which is used for
+     *    both tracking prediction and 2-point RANSAC.
+     * @return cam0_R_p_c: a rotation matrix which takes a vector
+     *    from previous cam0 frame to current cam0 frame.
+     */
+    void integrateImuData(cv::Matx33f& cam0_R_p_c);
+
+    /*
+     * @brief predictFeatureTracking Compensates the rotation
+     *    between consecutive camera frames so that feature
+     *    tracking would be more robust and fast.
+     * @param input_pts: features in the previous image to be tracked.
+     * @param R_p_c: a rotation matrix takes a vector in the previous
+     *    camera frame to the current camera frame.
+     * @param intrinsics: intrinsic matrix of the camera.
+     * @return compensated_pts: predicted locations of the features
+     *    in the current image based on the provided rotation.
+     *
+     * Note that the input and output points are of pixel coordinates.
+     */
+    void predictFeatureTracking(
+        const std::vector<cv::Point2f>& input_pts,
+        const cv::Matx33f& R_p_c,
+        const cv::Vec4d& intrinsics,
+        std::vector<cv::Point2f>& compenstated_pts);
+
+    /*
+     * @brief twoPointRansac Applies two point ransac algorithm
+     *    to mark the inliers in the input set.
+     * @param pts1: first set of points.
+     * @param pts2: second set of points.
+     * @param R_p_c: a rotation matrix takes a vector in the previous
+     *    camera frame to the current camera frame.
+     * @param intrinsics: intrinsics of the camera.
+     * @param distortion_model: distortion model of the camera.
+     * @param distortion_coeffs: distortion coefficients.
+     * @param inlier_error: acceptable error to be considered as an inlier.
+     * @param success_probability: the required probability of success.
+     * @return inlier_flag: 1 for inliers and 0 for outliers.
+     */
+    void twoPointRansac(
+        const std::vector<cv::Point2f>& pts1,
+        const std::vector<cv::Point2f>& pts2,
+        const cv::Matx33f& R_p_c,
+        const cv::Vec4d& intrinsics,
+        const std::string& distortion_model,
+        const cv::Vec4d& distortion_coeffs,
+        const double& inlier_error,
+        const double& success_probability,
+        std::vector<int>& inlier_markers);
+    void undistortPoints(
+        const std::vector<cv::Point2f>& pts_in,
+        const cv::Vec4d& intrinsics,
+        const std::string& distortion_model,
+        const cv::Vec4d& distortion_coeffs,
+        std::vector<cv::Point2f>& pts_out,
+        const cv::Matx33d &rectification_matrix = cv::Matx33d::eye(),
+        const cv::Vec4d &new_intrinsics = cv::Vec4d(1,1,0,0));
+    void rescalePoints(
+        std::vector<cv::Point2f>& pts1,
+        std::vector<cv::Point2f>& pts2,
+        float& scaling_factor);
+    std::vector<cv::Point2f> distortPoints(
+        const std::vector<cv::Point2f>& pts_in,
+        const cv::Vec4d& intrinsics,
+        const std::string& distortion_model,
+        const cv::Vec4d& distortion_coeffs);
+
+    /*
      * @brief drawFeaturesMono
      *    Draw tracked and newly detected features on the left
      *    image only.
      */
     void drawFeaturesMono();
+
+    /*
+     * @brief removeUnmarkedElements Remove the unmarked elements
+     *    within a vector.
+     * @param raw_vec: vector with outliers.
+     * @param markers: 0 will represent a outlier, 1 will be an inlier.
+     * @return refined_vec: a vector without outliers.
+     *
+     * Note that the order of the inliers in the raw_vec is perserved
+     * in the refined_vec.
+     */
+    template <typename T>
+    void removeUnmarkedElements(
+        const std::vector<T>& raw_vec,
+        const std::vector<unsigned char>& markers,
+        std::vector<T>& refined_vec) {
+      if (raw_vec.size() != markers.size()) {
+        ROS_WARN("The input size of raw_vec(%lu) and markers(%lu) does not match...",
+            raw_vec.size(), markers.size());
+      }
+      for (int i = 0; i < markers.size(); ++i) {
+        if (markers[i] == 0) continue;
+        refined_vec.push_back(raw_vec[i]);
+      }
+      return;
+    }
 
     // Indicate if this is the first image message.
     bool is_first_img;

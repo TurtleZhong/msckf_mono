@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <set>
 #include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <sensor_msgs/image_encodings.h>
 #include <random_numbers/random_numbers.h>
@@ -181,6 +183,13 @@ void ImageProcessor::monoCallback(
 
     if(is_first_img)
     {
+        /*Eigen test*/
+        AngleAxisd rotation_vector(M_PI/4, Vector3d(0,0,1));
+        cout << rotation_vector.matrix() << endl;
+        Vec3d r_v(0, 0, M_PI/4);
+        Matx33d r;
+        Rodrigues(r_v, r);
+        cout << r << endl;
         // Detect features in the first frame
         initializeFirstFrame();
         is_first_img = false;
@@ -200,8 +209,8 @@ void ImageProcessor::monoCallback(
     // Initialize the current features to empty vectors.
     curr_features_ptr.reset(new GridFeatures());
     for (int code = 0; code <
-        processor_config.grid_row*processor_config.grid_col; ++code) {
-      (*curr_features_ptr)[code] = vector<FeatureMetaData>(0);
+         processor_config.grid_row*processor_config.grid_col; ++code) {
+        (*curr_features_ptr)[code] = vector<FeatureMetaData>(0);
     }
 
 }
@@ -318,6 +327,421 @@ void ImageProcessor::initializeFirstFrame()
     return;
 }
 
+void ImageProcessor::trackFeatures()
+{
+    // Size of grid.
+    static int grid_height =
+            cam0_curr_img_ptr->image.rows / processor_config.grid_row;
+    static int grid_width =
+            cam0_curr_img_ptr->image.cols / processor_config.grid_col;
+
+    // Compute a rough relative rotation from pre frame to curr frame.
+    Matx33f cam0_R_p_c;
+    integrateImuData(cam0_R_p_c);
+
+    // Organize the features in the previous image.
+    vector<FeatureIDType> prev_ids(0);
+    vector<int> prev_lifetime(0);
+    vector<Point2f> prev_cam0_points(0);
+    for(const auto& item : (*prev_features_ptr))
+    {
+        for(const auto& prev_feature : item.second )
+        {
+            prev_ids.push_back(prev_feature.id);
+            prev_lifetime.push_back(prev_feature.lifetime);
+            prev_cam0_points.push_back(prev_feature.cam0_point);
+        }
+    }
+
+    // Number of the features before tracking.
+    before_tracking = prev_cam0_points.size();
+
+    if(prev_ids.size() == 0) return;
+
+    // Track features using LK optical flow method.
+    vector<Point2f> curr_cam0_points(0);
+    vector<unsigned char> track_inliers(0);
+
+    predictFeatureTracking(prev_cam0_points,
+                           cam0_R_p_c,
+                           cam0_intrinsics,
+                           curr_cam0_points);
+    calcOpticalFlowPyrLK(
+                prev_cam0_pyramid_, curr_cam0_pyramid_,
+                prev_cam0_points, curr_cam0_points,
+                track_inliers, noArray(),
+                Size(processor_config.patch_size, processor_config.patch_size),
+                processor_config.pyramid_levels,
+                TermCriteria(TermCriteria::COUNT+TermCriteria::EPS,
+                             processor_config.max_iteration,
+                             processor_config.track_precision),
+                cv::OPTFLOW_USE_INITIAL_FLOW);
+
+    // Mark those tracked points out of image region as untracked
+    for(int i = 0; i < curr_cam0_points.size(); ++i)
+    {
+        if(track_inliers[i] == 0) continue;
+        if(curr_cam0_points[i].y < 0 ||
+                curr_cam0_points[i].y > cam0_curr_img_ptr->image.rows - 1 ||
+                curr_cam0_points[i].x < 0 ||
+                curr_cam0_points[i].x > cam0_curr_img_ptr->image.cols - 1)
+        {
+            track_inliers[i] = 0;
+        }
+    }
+
+    // Collect the tracked points.
+    vector<FeatureIDType> prev_tracked_ids(0);
+    vector<int> prev_tracked_lifetime(0);
+    vector<Point2f> prev_tracked_cam0_points(0);
+    vector<Point2f> curr_tracked_cam0_points(0);
+
+    removeUnmarkedElements(
+                prev_ids, track_inliers, prev_tracked_ids);
+    removeUnmarkedElements(
+                prev_lifetime, track_inliers, prev_tracked_lifetime);
+    removeUnmarkedElements(
+                prev_cam0_points, track_inliers, prev_tracked_cam0_points);
+    removeUnmarkedElements(
+                curr_cam0_points, track_inliers, curr_tracked_cam0_points);
+
+    // Number of features left after tracking.
+    after_tracking = curr_tracked_cam0_points.size();
+
+    // For now we have use LK method to track the features
+    // Next we need to use ransac to calc the inliers and outliers.
+
+    // prev frames cam0
+    //              |
+    //              |ransac
+    //              |
+    //              v
+    // curr frames cam0
+
+    // RANSAC between previous and current images of cam0.
+    vector<int> cam0_ransac_inliers(0);
+    twoPointRansac(prev_tracked_cam0_points, curr_tracked_cam0_points,
+                   cam0_R_p_c, cam0_intrinsics, cam0_distortion_model,
+                   cam0_distortion_coeffs, processor_config.ransac_threshold,
+                   0.99, cam0_ransac_inliers);
+}
+
+void ImageProcessor::integrateImuData(Matx33f& cam0_R_p_c)
+{
+    // Find the start and the end limit within the imu msg buffer.
+    auto begin_iter = imu_msg_buffer.begin();
+    while (begin_iter != imu_msg_buffer.end()) {
+        if ((begin_iter->header.stamp-
+             cam0_prev_img_ptr->header.stamp).toSec() < -0.01)
+            ++begin_iter;
+        else
+            break;
+    }
+
+    auto end_iter = begin_iter;
+    while (end_iter != imu_msg_buffer.end()) {
+        if ((end_iter->header.stamp-
+             cam0_curr_img_ptr->header.stamp).toSec() < 0.005)
+            ++end_iter;
+        else
+            break;
+    }
+
+    // Compute the mean angular velocity in the IMU frame.
+    Vec3f mean_ang_vel(0.0, 0.0, 0.0);
+    for (auto iter = begin_iter; iter < end_iter; ++iter)
+        mean_ang_vel += Vec3f(iter->angular_velocity.x,
+                              iter->angular_velocity.y, iter->angular_velocity.z);
+
+    if (end_iter-begin_iter > 0)
+        mean_ang_vel *= 1.0f / (end_iter-begin_iter);
+
+    // Transform the mean angular velocity from the IMU
+    // frame to the cam0 and cam1 frames.
+    Vec3f cam0_mean_ang_vel = R_cam0_imu.t() * mean_ang_vel;
+
+    // Compute the relative rotation.
+    double dtime = (cam0_curr_img_ptr->header.stamp-
+                    cam0_prev_img_ptr->header.stamp).toSec();
+    Rodrigues(cam0_mean_ang_vel*dtime, cam0_R_p_c);
+    cam0_R_p_c = cam0_R_p_c.t();
+
+    // Delete the useless and used imu messages.
+    imu_msg_buffer.erase(imu_msg_buffer.begin(), end_iter);
+    return;
+}
+
+void ImageProcessor::predictFeatureTracking(
+        const vector<cv::Point2f>& input_pts,
+        const cv::Matx33f& R_p_c,
+        const cv::Vec4d& intrinsics,
+        vector<cv::Point2f>& compensated_pts)
+{
+
+    // Return directly if there are no input features.
+    if (input_pts.size() == 0) {
+        compensated_pts.clear();
+        return;
+    }
+    compensated_pts.resize(input_pts.size());
+
+    // Intrinsic matrix.
+    cv::Matx33f K(
+                intrinsics[0], 0.0, intrinsics[2],
+            0.0, intrinsics[1], intrinsics[3],
+            0.0, 0.0, 1.0);
+    cv::Matx33f H = K * R_p_c * K.inv();
+
+    for (int i = 0; i < input_pts.size(); ++i) {
+        cv::Vec3f p1(input_pts[i].x, input_pts[i].y, 1.0f);
+        cv::Vec3f p2 = H * p1;
+        compensated_pts[i].x = p2[0] / p2[2];
+        compensated_pts[i].y = p2[1] / p2[2];
+    }
+
+    return;
+}
+
+void ImageProcessor::twoPointRansac(
+        const vector<Point2f>& pts1, const vector<Point2f>& pts2,
+        const cv::Matx33f& R_p_c, const cv::Vec4d& intrinsics,
+        const std::string& distortion_model,
+        const cv::Vec4d& distortion_coeffs,
+        const double& inlier_error,
+        const double& success_probability,
+        vector<int>& inlier_markers) {
+
+    // Check the size of input point size.
+    if (pts1.size() != pts2.size())
+        ROS_ERROR("Sets of different size (%lu and %lu) are used...",
+                  pts1.size(), pts2.size());
+
+    double norm_pixel_unit = 2.0 / (intrinsics[0]+intrinsics[1]);
+    int iter_num = static_cast<int>(
+                ceil(log(1-success_probability) / log(1-0.7*0.7)));
+
+    // Initially, mark all points as inliers.
+    inlier_markers.clear();
+    inlier_markers.resize(pts1.size(), 1);
+
+    // Undistort all the points.
+    vector<Point2f> pts1_undistorted(pts1.size());
+    vector<Point2f> pts2_undistorted(pts2.size());
+    undistortPoints(
+                pts1, intrinsics, distortion_model,
+                distortion_coeffs, pts1_undistorted);
+    undistortPoints(
+                pts2, intrinsics, distortion_model,
+                distortion_coeffs, pts2_undistorted);
+
+    // Compenstate the points in the previous image with
+    // the relative rotation.
+    for (auto& pt : pts1_undistorted) {
+        Vec3f pt_h(pt.x, pt.y, 1.0f);
+        //Vec3f pt_hc = dR * pt_h;
+        Vec3f pt_hc = R_p_c * pt_h;
+        pt.x = pt_hc[0];
+        pt.y = pt_hc[1];
+    }
+
+    // Normalize the points to gain numerical stability.
+    float scaling_factor = 0.0f;
+    rescalePoints(pts1_undistorted, pts2_undistorted, scaling_factor);
+    norm_pixel_unit *= scaling_factor;
+
+    // Compute the difference between previous and current points,
+    // which will be used frequently later.
+    vector<Point2d> pts_diff(pts1_undistorted.size());
+    for (int i = 0; i < pts1_undistorted.size(); ++i)
+        pts_diff[i] = pts1_undistorted[i] - pts2_undistorted[i];
+
+    // Mark the point pairs with large difference directly.
+    // BTW, the mean distance of the rest of the point pairs
+    // are computed.
+    double mean_pt_distance = 0.0;
+    int raw_inlier_cntr = 0;
+    for (int i = 0; i < pts_diff.size(); ++i) {
+        double distance = sqrt(pts_diff[i].dot(pts_diff[i]));
+        // 25 pixel distance is a pretty large tolerance for normal motion.
+        // However, to be used with aggressive motion, this tolerance should
+        // be increased significantly to match the usage.
+        if (distance > 50.0*norm_pixel_unit) {
+            inlier_markers[i] = 0;
+        } else {
+            mean_pt_distance += distance;
+            ++raw_inlier_cntr;
+        }
+    }
+    mean_pt_distance /= raw_inlier_cntr;
+
+    // If the current number of inliers is less than 3, just mark
+    // all input as outliers. This case can happen with fast
+    // rotation where very few features are tracked.
+    if (raw_inlier_cntr < 3) {
+        for (auto& marker : inlier_markers) marker = 0;
+        return;
+    }
+
+    // Before doing 2-point RANSAC, we have to check if the motion
+    // is degenerated, meaning that there is no translation between
+    // the frames, in which case, the model of the RANSAC does not
+    // work. If so, the distance between the matched points will
+    // be almost 0.
+    //if (mean_pt_distance < inlier_error*norm_pixel_unit) {
+    if (mean_pt_distance < norm_pixel_unit) {
+        //ROS_WARN_THROTTLE(1.0, "Degenerated motion...");
+        for (int i = 0; i < pts_diff.size(); ++i) {
+            if (inlier_markers[i] == 0) continue;
+            if (sqrt(pts_diff[i].dot(pts_diff[i])) >
+                    inlier_error*norm_pixel_unit)
+                inlier_markers[i] = 0;
+        }
+        return;
+    }
+
+    // In the case of general motion, the RANSAC model can be applied.
+    // The three column corresponds to tx, ty, and tz respectively.
+    MatrixXd coeff_t(pts_diff.size(), 3);
+    for (int i = 0; i < pts_diff.size(); ++i) {
+        coeff_t(i, 0) = pts_diff[i].y;
+        coeff_t(i, 1) = -pts_diff[i].x;
+        coeff_t(i, 2) = pts1_undistorted[i].x*pts2_undistorted[i].y -
+                pts1_undistorted[i].y*pts2_undistorted[i].x;
+    }
+
+    vector<int> raw_inlier_idx;
+    for (int i = 0; i < inlier_markers.size(); ++i) {
+        if (inlier_markers[i] != 0)
+            raw_inlier_idx.push_back(i);
+    }
+
+    vector<int> best_inlier_set;
+    double best_error = 1e10;
+    random_numbers::RandomNumberGenerator random_gen;
+
+    for (int iter_idx = 0; iter_idx < iter_num; ++iter_idx) {
+        // Randomly select two point pairs.
+        // Although this is a weird way of selecting two pairs, but it
+        // is able to efficiently avoid selecting repetitive pairs.
+        int pair_idx1 = raw_inlier_idx[random_gen.uniformInteger(
+                    0, raw_inlier_idx.size()-1)];
+        int idx_diff = random_gen.uniformInteger(
+                    1, raw_inlier_idx.size()-1);
+        int pair_idx2 = pair_idx1+idx_diff < raw_inlier_idx.size() ?
+                    pair_idx1+idx_diff : pair_idx1+idx_diff-raw_inlier_idx.size();
+
+        // Construct the model;
+        Vector2d coeff_tx(coeff_t(pair_idx1, 0), coeff_t(pair_idx2, 0));
+        Vector2d coeff_ty(coeff_t(pair_idx1, 1), coeff_t(pair_idx2, 1));
+        Vector2d coeff_tz(coeff_t(pair_idx1, 2), coeff_t(pair_idx2, 2));
+        vector<double> coeff_l1_norm(3);
+        coeff_l1_norm[0] = coeff_tx.lpNorm<1>();
+        coeff_l1_norm[1] = coeff_ty.lpNorm<1>();
+        coeff_l1_norm[2] = coeff_tz.lpNorm<1>();
+        int base_indicator = min_element(coeff_l1_norm.begin(),
+                                         coeff_l1_norm.end())-coeff_l1_norm.begin();
+
+        Vector3d model(0.0, 0.0, 0.0);
+        if (base_indicator == 0) {
+            Matrix2d A;
+            A << coeff_ty, coeff_tz;
+            Vector2d solution = A.inverse() * (-coeff_tx);
+            model(0) = 1.0;
+            model(1) = solution(0);
+            model(2) = solution(1);
+        } else if (base_indicator ==1) {
+            Matrix2d A;
+            A << coeff_tx, coeff_tz;
+            Vector2d solution = A.inverse() * (-coeff_ty);
+            model(0) = solution(0);
+            model(1) = 1.0;
+            model(2) = solution(1);
+        } else {
+            Matrix2d A;
+            A << coeff_tx, coeff_ty;
+            Vector2d solution = A.inverse() * (-coeff_tz);
+            model(0) = solution(0);
+            model(1) = solution(1);
+            model(2) = 1.0;
+        }
+
+        // Find all the inliers among point pairs.
+        VectorXd error = coeff_t * model;
+
+        vector<int> inlier_set;
+        for (int i = 0; i < error.rows(); ++i) {
+            if (inlier_markers[i] == 0) continue;
+            if (std::abs(error(i)) < inlier_error*norm_pixel_unit)
+                inlier_set.push_back(i);
+        }
+
+        // If the number of inliers is small, the current
+        // model is probably wrong.
+        if (inlier_set.size() < 0.2*pts1_undistorted.size())
+            continue;
+
+        // Refit the model using all of the possible inliers.
+        VectorXd coeff_tx_better(inlier_set.size());
+        VectorXd coeff_ty_better(inlier_set.size());
+        VectorXd coeff_tz_better(inlier_set.size());
+        for (int i = 0; i < inlier_set.size(); ++i) {
+            coeff_tx_better(i) = coeff_t(inlier_set[i], 0);
+            coeff_ty_better(i) = coeff_t(inlier_set[i], 1);
+            coeff_tz_better(i) = coeff_t(inlier_set[i], 2);
+        }
+
+        Vector3d model_better(0.0, 0.0, 0.0);
+        if (base_indicator == 0) {
+            MatrixXd A(inlier_set.size(), 2);
+            A << coeff_ty_better, coeff_tz_better;
+            Vector2d solution =
+                    (A.transpose() * A).inverse() * A.transpose() * (-coeff_tx_better);
+            model_better(0) = 1.0;
+            model_better(1) = solution(0);
+            model_better(2) = solution(1);
+        } else if (base_indicator ==1) {
+            MatrixXd A(inlier_set.size(), 2);
+            A << coeff_tx_better, coeff_tz_better;
+            Vector2d solution =
+                    (A.transpose() * A).inverse() * A.transpose() * (-coeff_ty_better);
+            model_better(0) = solution(0);
+            model_better(1) = 1.0;
+            model_better(2) = solution(1);
+        } else {
+            MatrixXd A(inlier_set.size(), 2);
+            A << coeff_tx_better, coeff_ty_better;
+            Vector2d solution =
+                    (A.transpose() * A).inverse() * A.transpose() * (-coeff_tz_better);
+            model_better(0) = solution(0);
+            model_better(1) = solution(1);
+            model_better(2) = 1.0;
+        }
+
+        // Compute the error and upate the best model if possible.
+        VectorXd new_error = coeff_t * model_better;
+
+        double this_error = 0.0;
+        for (const auto& inlier_idx : inlier_set)
+            this_error += std::abs(new_error(inlier_idx));
+        this_error /= inlier_set.size();
+
+        if (inlier_set.size() > best_inlier_set.size()) {
+            best_error = this_error;
+            best_inlier_set = inlier_set;
+        }
+    }
+
+    // Fill in the markers.
+    inlier_markers.clear();
+    inlier_markers.resize(pts1.size(), 0);
+    for (const auto& inlier_idx : best_inlier_set)
+        inlier_markers[inlier_idx] = 1;
+
+    //printf("inlier ratio: %lu/%lu\n",
+    //    best_inlier_set.size(), inlier_markers.size());
+
+    return;
+}
 
 void ImageProcessor::drawFeaturesMono()
 {
