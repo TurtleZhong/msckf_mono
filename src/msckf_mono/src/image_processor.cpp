@@ -190,8 +190,11 @@ void ImageProcessor::monoCallback(
     else
     {
         // Track the feature in the previous image.
-        ROS_INFO("Need to track the features");
+        ROS_INFO("***Track the features.***");
         trackFeatures();
+
+        // Add new features into the current image.
+        addNewFeatures();
 
         drawFeaturesMono();
     }
@@ -460,6 +463,136 @@ void ImageProcessor::trackFeatures()
         curr_feature_num, prev_feature_num,
         static_cast<double>(curr_feature_num)/
         (static_cast<double>(prev_feature_num)+1e-5));
+    return;
+}
+
+void ImageProcessor::addNewFeatures()
+{
+    const Mat& curr_img = cam0_curr_img_ptr->image;
+    // Size of each grid.
+    static int grid_height =
+            curr_img.rows / processor_config.grid_row;
+    static int grid_width =
+            curr_img.cols / processor_config.grid_col;
+
+    // Creat a mask to avoid redetecting existing features.
+    Mat mask(curr_img.rows, curr_img.cols, CV_8U, Scalar(1));
+    for(const auto& features : *curr_features_ptr)
+    {
+        for(const auto& feature : features.second)
+        {
+            const int y = static_cast<int>(feature.cam0_point.y);
+            const int x = static_cast<int>(feature.cam0_point.x);
+
+            int up_lim = y - 2, bottom_lim = y + 3,
+                left_lim = x - 2, right_lim = x + 3;
+            if(up_lim < 0) up_lim = 0;
+            if(bottom_lim > curr_img.rows) bottom_lim = curr_img.rows;
+            if(left_lim < 0) left_lim = 0;
+            if(right_lim > curr_img.cols) right_lim = curr_img.cols;
+
+            Range row_range(up_lim, bottom_lim);
+            Range col_range(left_lim, right_lim);
+            mask(row_range, col_range) = 0;
+        }
+    }
+
+    // Detect new features.
+    vector<KeyPoint> new_features(0);
+    detector_ptr->detect(curr_img, new_features, mask);
+
+    // Collect the new detected features based on the grid.
+    // Select the ones with top response within each grid afterwards.
+    vector<vector<KeyPoint>> new_feature_sieve(
+                processor_config.grid_row * processor_config.grid_col);
+    for(const auto& feature : new_features)
+    {
+        int row = static_cast<int>(feature.pt.y / grid_height);
+        int col = static_cast<int>(feature.pt.x / grid_width);
+        new_feature_sieve[row*processor_config.grid_col + col].push_back(feature);
+    }
+    new_features.clear();
+    for(auto& item : new_feature_sieve)
+    {
+        if(item.size() > processor_config.grid_max_feature_num)
+        {
+            std::sort(item.begin(), item.end(),
+                      &ImageProcessor::keyPointCompareByResponse);
+            item.erase(item.begin() + processor_config.grid_max_feature_num, item.end());
+        }
+        new_features.insert(new_features.end(), item.begin(), item.end());
+    }
+
+    // If stereo, we need Stereo Match.
+    vector<Point2f> cam0_points(new_features.size());
+    for(int i = 0; i < new_features.size(); ++i)
+    {
+        cam0_points[i] = new_features[i].pt;
+    }
+    vector<int> inlier_markers(cam0_points.size(), 1);
+
+    vector<Point2f> cam0_inliers(0);
+    vector<float> response_inliers(0);
+    for(int i = 0; i < inlier_markers.size(); ++i)
+    {
+        cam0_inliers.push_back(cam0_points[i]);
+        response_inliers.push_back(new_features[i].response);
+    }
+
+
+    // Group the features into grids.
+    GridFeatures grid_new_features;
+    for(int code = 0; code <
+        processor_config.grid_col * processor_config.grid_row; ++code)
+    {
+        grid_new_features[code] = vector<FeatureMetaData>(0);
+    }
+
+    for(int i = 0; i < cam0_inliers.size(); i++)
+    {
+        const Point2f& cam0_point = cam0_inliers[i];
+        const float& response = response_inliers[i];
+
+        int row = static_cast<int>(cam0_point.y / grid_height);
+        int col = static_cast<int>(cam0_point.x / grid_width);
+        int code = row*processor_config.grid_col + col;
+
+        FeatureMetaData new_feature;
+        new_feature.response = response;
+        new_feature.cam0_point = cam0_point;
+        grid_new_features[code].push_back(new_feature);
+    }
+
+    // Sort the new features in each grid based on its response.
+    for(auto& item : grid_new_features)
+    {
+        std::sort(item.second.begin(), item.second.end(),
+                  &ImageProcessor::featureCompareByResponse);
+    }
+
+    int new_added_feature_num = 0;
+    // Collect new features within each grid with high response.
+    for(int code = 0; code <
+        processor_config.grid_col * processor_config.grid_row; ++ code)
+    {
+        vector<FeatureMetaData>& features_this_grid = (*curr_features_ptr)[code];
+        vector<FeatureMetaData>& new_features_this_grid = grid_new_features[code];
+
+        if(features_this_grid.size() >=
+                processor_config.grid_min_feature_num) continue;
+        int vacancy_num = processor_config.grid_min_feature_num -
+                features_this_grid.size();
+        for(int k = 0; k <
+            vacancy_num && k < new_features_this_grid.size(); k++)
+        {
+            features_this_grid.push_back(new_features_this_grid[k]);
+            features_this_grid.back().id = next_feature_id++;
+            features_this_grid.back().lifetime = 1;
+
+            ++new_added_feature_num;
+        }
+    }
+    ROS_INFO("\033[0;33m new added feature: %d\033[0m\n", new_added_feature_num);
     return;
 }
 
@@ -873,7 +1006,7 @@ void ImageProcessor::drawFeaturesMono()
 {
     // Colors for different features.
     Scalar tracked(0, 255, 0);
-    Scalar new_feature(0, 255, 255);
+    Scalar new_feature(0, 0, 255);
 
     static int grid_height =
             cam0_curr_img_ptr->image.rows / processor_config.grid_row;
@@ -937,7 +1070,7 @@ void ImageProcessor::drawFeaturesMono()
     }
 
     imshow("Feature", out_img);
-    waitKey(27);
+    waitKey(1);
 }
 
 

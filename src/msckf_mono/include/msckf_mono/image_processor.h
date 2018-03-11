@@ -162,6 +162,13 @@ private:
      */
     void trackFeatures();
 
+    /*
+     * @addNewFeatures
+     *    Detect new features on the image to ensure that the
+     *    features are uniformly distributed on the image.
+     */
+    void addNewFeatures();
+
 
     /*
      * @brief integrateImuData Integrates the IMU gyro readings
