@@ -142,8 +142,8 @@ bool ImageProcessor::createRosIO()
     //                "features", 3);
     //    tracking_info_pub = nh.advertise<TrackingInfo>(
     //                "tracking_info", 1);
-    //    image_transport::ImageTransport it(nh);
-    //    debug_stereo_pub = it.advertise("debug_stereo_image", 1);
+    image_transport::ImageTransport it(nh);
+    mono_pub = it.advertise("cam0_image_with_features", 1);
 
     cam0_img_sub = nh.subscribe("cam0_image", 10,
                                 &ImageProcessor::monoCallback, this);
@@ -186,6 +186,7 @@ void ImageProcessor::monoCallback(
         // Detect features in the first frame
         initializeFirstFrame();
         is_first_img = false;
+        drawFeaturesMono();
     }
     else
     {
@@ -195,6 +196,8 @@ void ImageProcessor::monoCallback(
 
         // Add new features into the current image.
         addNewFeatures();
+
+        pruneGridFeatures();
 
         drawFeaturesMono();
     }
@@ -318,10 +321,6 @@ void ImageProcessor::initializeFirstFrame()
                    3, Scalar(0, 255, 0), -1);
         }
     }
-
-    imshow("features", out_img);
-    waitKey(27);
-
     return;
 }
 
@@ -1002,75 +1001,95 @@ vector<cv::Point2f> ImageProcessor::distortPoints(
   return pts_out;
 }
 
+void ImageProcessor::pruneGridFeatures() {
+  for (auto& item : *curr_features_ptr) {
+    auto& grid_features = item.second;
+    // Continue if the number of features in this grid does
+    // not exceed the upper bound.
+    if (grid_features.size() <=
+        processor_config.grid_max_feature_num) continue;
+    std::sort(grid_features.begin(), grid_features.end(),
+        &ImageProcessor::featureCompareByLifetime);
+    grid_features.erase(grid_features.begin()+
+        processor_config.grid_max_feature_num,
+        grid_features.end());
+  }
+  return;
+}
+
 void ImageProcessor::drawFeaturesMono()
 {
-    // Colors for different features.
-    Scalar tracked(0, 255, 0);
-    Scalar new_feature(0, 0, 255);
+    if(mono_pub.getNumSubscribers() > 0)
+    {
+        // Colors for different features.
+        Scalar tracked(0, 255, 0);
+        Scalar new_feature(0, 0, 255);
 
-    static int grid_height =
-            cam0_curr_img_ptr->image.rows / processor_config.grid_row;
-    static int grid_width =
-            cam0_curr_img_ptr->image.cols / processor_config.grid_col;
+        static int grid_height =
+                cam0_curr_img_ptr->image.rows / processor_config.grid_row;
+        static int grid_width =
+                cam0_curr_img_ptr->image.cols / processor_config.grid_col;
 
-    // Create an output image.
-    int img_height = cam0_curr_img_ptr->image.rows;
-    int img_width = cam0_curr_img_ptr->image.cols;
-    Mat out_img(img_height, img_width, CV_8UC3);
-    cvtColor(cam0_curr_img_ptr->image, out_img, CV_GRAY2RGB);
+        // Create an output image.
+        int img_height = cam0_curr_img_ptr->image.rows;
+        int img_width = cam0_curr_img_ptr->image.cols;
+        Mat out_img(img_height, img_width, CV_8UC3);
+        cvtColor(cam0_curr_img_ptr->image, out_img, CV_GRAY2RGB);
 
-    // Draw grids on the image.
-    for (int i = 1; i < processor_config.grid_row; ++i) {
-        Point pt1(0, i*grid_height);
-        Point pt2(img_width, i*grid_height);
-        line(out_img, pt1, pt2, Scalar(255, 0, 0));
-    }
-    for (int i = 1; i < processor_config.grid_col; ++i) {
-        Point pt1(i*grid_width, 0);
-        Point pt2(i*grid_width, img_height);
-        line(out_img, pt1, pt2, Scalar(255, 0, 0));
-    }
-
-    // Collect features ids in the previous frame.
-    vector<FeatureIDType> prev_ids(0);
-    for (const auto& grid_features : *prev_features_ptr)
-        for (const auto& feature : grid_features.second)
-            prev_ids.push_back(feature.id);
-
-    // Collect feature points in the previous frame.
-    map<FeatureIDType, Point2f> prev_points;
-    for (const auto& grid_features : *prev_features_ptr)
-        for (const auto& feature : grid_features.second)
-            prev_points[feature.id] = feature.cam0_point;
-
-    // Collect feature points in the current frame.
-    map<FeatureIDType, Point2f> curr_points;
-    for (const auto& grid_features : *curr_features_ptr)
-        for (const auto& feature : grid_features.second)
-            curr_points[feature.id] = feature.cam0_point;
-
-    // Draw tracked features.
-    for (const auto& id : prev_ids) {
-        if (prev_points.find(id) != prev_points.end() &&
-                curr_points.find(id) != curr_points.end()) {
-            cv::Point2f prev_pt = prev_points[id];
-            cv::Point2f curr_pt = curr_points[id];
-            circle(out_img, curr_pt, 3, tracked, -1);
-            line(out_img, prev_pt, curr_pt, tracked, 1);
-
-            prev_points.erase(id);
-            curr_points.erase(id);
+        // Draw grids on the image.
+        for (int i = 1; i < processor_config.grid_row; ++i) {
+            Point pt1(0, i*grid_height);
+            Point pt2(img_width, i*grid_height);
+            line(out_img, pt1, pt2, Scalar(255, 0, 0));
         }
-    }
+        for (int i = 1; i < processor_config.grid_col; ++i) {
+            Point pt1(i*grid_width, 0);
+            Point pt2(i*grid_width, img_height);
+            line(out_img, pt1, pt2, Scalar(255, 0, 0));
+        }
 
-    // Draw new features.
-    for (const auto& new_curr_point : curr_points) {
-        cv::Point2f pt = new_curr_point.second;
-        circle(out_img, pt, 3, new_feature, -1);
-    }
+        // Collect features ids in the previous frame.
+        vector<FeatureIDType> prev_ids(0);
+        for (const auto& grid_features : *prev_features_ptr)
+            for (const auto& feature : grid_features.second)
+                prev_ids.push_back(feature.id);
 
-    imshow("Feature", out_img);
-    waitKey(1);
+        // Collect feature points in the previous frame.
+        map<FeatureIDType, Point2f> prev_points;
+        for (const auto& grid_features : *prev_features_ptr)
+            for (const auto& feature : grid_features.second)
+                prev_points[feature.id] = feature.cam0_point;
+
+        // Collect feature points in the current frame.
+        map<FeatureIDType, Point2f> curr_points;
+        for (const auto& grid_features : *curr_features_ptr)
+            for (const auto& feature : grid_features.second)
+                curr_points[feature.id] = feature.cam0_point;
+
+        // Draw tracked features.
+        for (const auto& id : prev_ids) {
+            if (prev_points.find(id) != prev_points.end() &&
+                    curr_points.find(id) != curr_points.end()) {
+                cv::Point2f prev_pt = prev_points[id];
+                cv::Point2f curr_pt = curr_points[id];
+                circle(out_img, curr_pt, 3, tracked, -1);
+                line(out_img, prev_pt, curr_pt, tracked, 1);
+
+                prev_points.erase(id);
+                curr_points.erase(id);
+            }
+        }
+
+        // Draw new features.
+        for (const auto& new_curr_point : curr_points) {
+            cv::Point2f pt = new_curr_point.second;
+            circle(out_img, pt, 3, new_feature, -1);
+        }
+
+        cv_bridge::CvImage debug_image(cam0_curr_img_ptr->header, "bgr8", out_img);
+        mono_pub.publish(debug_image.toImageMsg());
+    }
+    return;
 }
 
 
