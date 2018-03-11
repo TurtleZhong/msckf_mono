@@ -9,3 +9,6 @@ next target: A ros node to subscribe the mono image and imu data!
 
 next target: A ros node that can extract the feature and tracking the feature with the consecutive image from the datasets.
 
+2018.03.11 finish the target.
+
+next target: advertise the Tracking information and the image. DO NOT USE opencv to show the image. please use rqt or rviz.
