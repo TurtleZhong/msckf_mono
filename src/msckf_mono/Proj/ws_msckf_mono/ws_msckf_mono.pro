@@ -25,13 +25,16 @@ INCLUDEPATH += \
 SOURCES += \
     ../../src/utils.cpp \
     ../../src/image_processor.cpp \
-    ../../src/image_processor_nodelet.cpp
+    ../../src/image_processor_nodelet.cpp \
+    ../../src/msckf_mono.cpp \
+    ../../src/msckf_mono_nodelet.cpp
 
 DISTFILES += \
     ../../package.xml \
     ../../README.md \
     ../../CMakeLists.txt \
-    ../../launch/image_processor_euroc.launch
+    ../../launch/image_processor_euroc.launch \
+    ../../launch/msckf_vio_euroc.launch
 
 HEADERS += \
     ../../include/msckf_mono/cam_state.h \
@@ -40,4 +43,6 @@ HEADERS += \
     ../../include/msckf_mono/math_utils.hpp \
     ../../include/msckf_mono/utils.h \
     ../../include/msckf_mono/image_processor.h \
-    ../../include/msckf_mono/image_processor_nodelet.h
+    ../../include/msckf_mono/image_processor_nodelet.h \
+    ../../include/msckf_mono/msckf_mono.h \
+    ../../include/msckf_mono/msckf_mono_nodelet.h

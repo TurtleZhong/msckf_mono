@@ -12,3 +12,7 @@ next target: A ros node that can extract the feature and tracking the feature wi
 2018.03.11 finish the target.
 
 next target: advertise the Tracking information and the image. DO NOT USE opencv to show the image. please use rqt or rviz.
+
+2018.4.26 finish the target.
+
+next target: Modified the msckf node (a big project)
