@@ -65,13 +65,18 @@ find_package(SuiteSparse REQUIRED)
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+# Generate messages in the 'msg' folder
+ add_message_files(
+   FILES
+   FeatureMeasurement.msg
+   CameraMeasurement.msg
+   TrackingInfo.msg
+ )
 
+generate_messages(
+        DEPENDENCIES
+        std_msgs
+)
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
@@ -121,11 +126,22 @@ find_package(SuiteSparse REQUIRED)
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+#catkin_package(
+##  INCLUDE_DIRS include
+##  LIBRARIES test
+##  CATKIN_DEPENDS std_msgs
+##  DEPENDS system_lib
+#)
+
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES test
-#  CATKIN_DEPENDS std_msgs
-#  DEPENDS system_lib
+        INCLUDE_DIRS include
+        LIBRARIES image_processor
+        CATKIN_DEPENDS
+        roscpp std_msgs tf nav_msgs sensor_msgs geometry_msgs
+        eigen_conversions tf_conversions random_numbers message_runtime
+        image_transport cv_bridge message_filters pcl_conversions
+        pcl_ros std_srvs
+        DEPENDS Boost EIGEN3 OpenCV SUITESPARSE
 )
 
 ###########

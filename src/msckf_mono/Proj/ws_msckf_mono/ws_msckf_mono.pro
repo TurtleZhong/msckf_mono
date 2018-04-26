@@ -20,6 +20,7 @@ INCLUDEPATH += \
     /usr/include \
     /usr/include/eigen3 \
     /usr/local/include \
+    /home/m/ws_msckf_mono/devel/include/ \
 
 SOURCES += \
     ../../src/utils.cpp \

@@ -87,6 +87,7 @@
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>image_transport</exec_depend>
   <exec_depend>message_filters</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>nodelet</exec_depend>
   <exec_depend>pcl_conversions</exec_depend>
