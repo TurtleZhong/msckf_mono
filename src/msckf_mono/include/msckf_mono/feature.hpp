@@ -40,7 +40,7 @@ struct Feature {
     int inner_loop_max_iteration;
 
     OptimizationConfig():
-      translation_threshold(0.2),
+      translation_threshold(0.1),
       huber_epsilon(0.01),
       estimation_precision(5e-7),
       initial_damping(1e-3),
@@ -302,7 +302,7 @@ bool Feature::initializePosition(
 
     // Add the measurement.
     measurements.push_back(m.second.head<2>());
-    measurements.push_back(m.second.tail<2>());
+//    measurements.push_back(m.second.tail<2>());
 
     // This camera pose will take a vector from this camera frame
     // to the world frame.
@@ -311,11 +311,11 @@ bool Feature::initializePosition(
         cam_state_iter->second.orientation).transpose();
     cam0_pose.translation() = cam_state_iter->second.position;
 
-    Eigen::Isometry3d cam1_pose;
-    cam1_pose = cam0_pose * CAMState::T_cam0_cam1.inverse();
+//    Eigen::Isometry3d cam1_pose;
+//    cam1_pose = cam0_pose * CAMState::T_cam0_cam1.inverse();
 
     cam_poses.push_back(cam0_pose);
-    cam_poses.push_back(cam1_pose);
+//    cam_poses.push_back(cam1_pose);
   }
 
   // All camera poses should be modified such that it takes a
@@ -329,10 +329,7 @@ bool Feature::initializePosition(
   Eigen::Vector3d initial_position(0.0, 0.0, 0.0);
   generateInitialGuess(cam_poses[cam_poses.size()-1], measurements[0],
       measurements[measurements.size()-1], initial_position);
-  cout << "********************************" << endl;
-  cout << "The feature's position in the first frame is:" << endl;
-  cout << initial_position << endl;
-  cout << "********************************" << endl;
+
   Eigen::Vector3d solution(
       initial_position(0)/initial_position(2),
       initial_position(1)/initial_position(2),
@@ -414,6 +411,8 @@ bool Feature::initializePosition(
   Eigen::Vector3d final_position(solution(0)/solution(2),
       solution(1)/solution(2), 1.0/solution(2));
 
+
+
   // Check if the solution is valid. Make sure the feature
   // is in front of every camera frame observing it.
   bool is_valid_solution = true;
@@ -430,7 +429,13 @@ bool Feature::initializePosition(
   position = T_c0_w.linear()*final_position + T_c0_w.translation();
 
   if (is_valid_solution)
+  {
+//    cout << "***********************" << endl;
+//    cout << "Final position in the world frame is:" << endl;
+//    cout << position << endl;
+//    cout << "***********************" << endl;
     is_initialized = true;
+  }
 
   return is_valid_solution;
 }

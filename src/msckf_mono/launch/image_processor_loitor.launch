@@ -2,7 +2,7 @@
 
   <arg name="robot" default="mono_vio"/>
   <arg name="calibration_file"
-    default="$(find msckf_mono)/config/camchain-imucam-euroc.yaml"/>
+    default="$(find msckf_mono)/config/camchain-imucam-loitor.yaml"/>
 
   <!-- Image Processor Nodelet  -->
   <group ns="$(arg robot)">
@@ -11,14 +11,14 @@
       output="screen">
 
       <rosparam command="load" file="$(arg calibration_file)"/>
-      <param name="grid_row" value="6"/>
-      <param name="grid_col" value="10"/>
+      <param name="grid_row" value="5"/>
+      <param name="grid_col" value="6"/>
       <param name="grid_min_feature_num" value="3"/>
       <param name="grid_max_feature_num" value="4"/>
-      <param name="pyramid_levels" value="4"/>
+      <param name="pyramid_levels" value="3"/>
       <param name="patch_size" value="15"/>
       <param name="fast_threshold" value="10"/>
-      <param name="max_iteration" value="50"/>
+      <param name="max_iteration" value="30"/>
       <param name="track_precision" value="0.01"/>
       <param name="ransac_threshold" value="3"/>
       <param name="stereo_threshold" value="5"/>

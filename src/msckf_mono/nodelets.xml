@@ -1,3 +1,14 @@
+<library path="lib/libmsckf_mono_nodelet">
+  <class name="msckf_mono/MsckfVioNodelet"
+         type="msckf_mono::MsckfVioNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description>
+      Multi-State contraint Kalman filter for vision-
+      aided inertial navigation with observability constain.
+    </description>
+  </class>
+</library>
+
 <library path="lib/libimage_processor_nodelet">
   <class name="msckf_mono/ImageProcessorNodelet"
          type="msckf_mono::ImageProcessorNodelet"

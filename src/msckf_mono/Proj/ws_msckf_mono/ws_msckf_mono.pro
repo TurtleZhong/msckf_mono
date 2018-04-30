@@ -34,7 +34,10 @@ DISTFILES += \
     ../../README.md \
     ../../CMakeLists.txt \
     ../../launch/image_processor_euroc.launch \
-    ../../launch/msckf_vio_euroc.launch
+    ../../launch/msckf_vio_euroc.launch \
+    ../../msg/CameraMeasurement.msg \
+    ../../msg/FeatureMeasurement.msg \
+    ../../msg/TrackingInfo.msg
 
 HEADERS += \
     ../../include/msckf_mono/cam_state.h \

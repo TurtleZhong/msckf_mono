@@ -3,7 +3,7 @@
   <arg name="robot" default="mono_vio"/>
   <arg name="fixed_frame_id" default="world"/>
   <arg name="calibration_file"
-    default="$(find msckf_mono)/config/camchain-imucam-euroc.yaml"/>
+    default="$(find msckf_mono)/config/camchain-imucam-loitor.yaml"/>
 
   <!-- Image Processor Nodelet  -->
   <include file="$(find msckf_mono)/launch/image_processor_euroc.launch">
@@ -24,18 +24,12 @@
       <param name="frame_rate" value="20"/>
       <param name="fixed_frame_id" value="$(arg fixed_frame_id)"/>
       <param name="child_frame_id" value="odom"/>
-      <param name="max_cam_state_size" value="25"/>
+      <param name="max_cam_state_size" value="20"/>
       <param name="position_std_threshold" value="8.0"/>
 
-      <!--
       <param name="rotation_threshold" value="0.2618"/>
       <param name="translation_threshold" value="0.4"/>
       <param name="tracking_rate_threshold" value="0.5"/>
-      -->
-
-      <param name="rotation_threshold" value="0.2618"/>
-      <param name="translation_threshold" value="0.2"/>
-      <param name="tracking_rate_threshold" value="1"/>
 
       <!-- Feature optimization config -->
       <param name="feature/config/translation_threshold" value="0.05"/>

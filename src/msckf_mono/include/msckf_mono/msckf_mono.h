@@ -93,7 +93,7 @@ class MsckfVio {
     /*
      * @brief featureCallback
      *    Callback function for feature measurements.
-     * @param msg Stereo feature measurements.
+     * @param msg Mono feature measurements.
      */
     void featureCallback(const CameraMeasurementConstPtr& msg);
 
@@ -127,6 +127,9 @@ class MsckfVio {
     void processModel(const double& time,
         const Eigen::Vector3d& m_gyro,
         const Eigen::Vector3d& m_acc);
+    void processModelMono(const double &time,
+                          const Eigen::Vector3d &m_gyro,
+                          const Eigen::Vector3d &m_acc);
     void predictNewState(const double& dt,
         const Eigen::Vector3d& gyro,
         const Eigen::Vector3d& acc);
@@ -138,9 +141,9 @@ class MsckfVio {
     // for a single feature observed at a single camera frame.
     void measurementJacobian(const StateIDType& cam_state_id,
         const FeatureIDType& feature_id,
-        Eigen::Matrix<double, 4, 6>& H_x,
-        Eigen::Matrix<double, 4, 3>& H_f,
-        Eigen::Vector4d& r);
+        Eigen::Matrix<double, 2, 6>& H_x,
+        Eigen::Matrix<double, 2, 3>& H_f,
+        Eigen::Vector2d &r);
     // This function computes the Jacobian of all measurements viewed
     // in the given camera states of this feature.
     void featureJacobian(const FeatureIDType& feature_id,

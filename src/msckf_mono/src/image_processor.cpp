@@ -1051,6 +1051,8 @@ namespace msckf_mono
           feature_msg_ptr->features[i].id = curr_ids[i];
           feature_msg_ptr->features[i].u0 = curr_cam0_points_undistorted[i].x;
           feature_msg_ptr->features[i].v0 = curr_cam0_points_undistorted[i].y;
+          feature_msg_ptr->features[i].u1 = curr_cam0_points_undistorted[i].x;
+          feature_msg_ptr->features[i].v1 = curr_cam0_points_undistorted[i].y;
         }
 
         feature_pub.publish(feature_msg_ptr);

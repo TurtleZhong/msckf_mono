@@ -11,6 +11,6 @@ void MsckfVioNodelet::onInit() {
 }
 
 PLUGINLIB_DECLARE_CLASS(msckf_vio, MsckfVioNodelet,
-    msckf_vio::MsckfVioNodelet, nodelet::Nodelet);
+    msckf_mono::MsckfVioNodelet, nodelet::Nodelet);
 
 }

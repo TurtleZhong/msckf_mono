@@ -135,7 +135,7 @@ generate_messages(
 
 catkin_package(
         INCLUDE_DIRS include
-        LIBRARIES image_processor
+        LIBRARIES msckf_mono image_processor
         CATKIN_DEPENDS
         roscpp std_msgs tf nav_msgs sensor_msgs geometry_msgs
         eigen_conversions tf_conversions random_numbers message_runtime
@@ -158,6 +158,34 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   ${SUITESPARSE_INCLUDE_DIRS}
 )
+
+# Msckf Mono
+add_library(msckf_mono
+  src/msckf_mono.cpp
+  src/utils.cpp
+)
+add_dependencies(msckf_mono
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(msckf_mono
+  ${catkin_LIBRARIES}
+  ${SUITESPARSE_LIBRARIES}
+)
+
+# Msckf Vio nodelet
+add_library(msckf_mono_nodelet
+  src/msckf_mono_nodelet.cpp
+)
+add_dependencies(msckf_mono_nodelet
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+target_link_libraries(msckf_mono_nodelet
+  msckf_mono
+  ${catkin_LIBRARIES}
+)
+
 
 # Image processor
 add_library(image_processor
