@@ -43,7 +43,7 @@ Visualization Manager:
       Cell Size: 1
       Class: rviz/Grid
       Color: 160; 160; 164
-      Enabled: true
+      Enabled: false
       Line Style:
         Line Width: 0.0299999993
         Value: Lines
@@ -56,9 +56,9 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 20
       Reference Frame: world
-      Value: true
+      Value: false
     - Alpha: 0.699999988
-      Cell Size: 5
+      Cell Size: 1
       Class: rviz/Grid
       Color: 160; 160; 164
       Enabled: true
@@ -72,7 +72,7 @@ Visualization Manager:
         Y: 0
         Z: 0
       Plane: XY
-      Plane Cell Count: 4
+      Plane Cell Count: 10
       Reference Frame: world
       Value: true
     - Class: rviz/TF
@@ -80,18 +80,13 @@ Visualization Manager:
       Frame Timeout: 1000
       Frames:
         All Enabled: false
-        odom:
-          Value: true
-        world:
-          Value: true
       Marker Scale: 4
       Name: TF
       Show Arrows: false
       Show Axes: true
       Show Names: true
       Tree:
-        world:
-          {}
+        {}
       Update Interval: 0
       Value: true
     - Angle Tolerance: 0
@@ -286,25 +281,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 41.2018814
+      Distance: 24.2599945
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -7.09030437
-        Y: 3.22681618
-        Z: -7.32972574
+        X: -1.22508264
+        Y: 0.83078599
+        Z: -8.01996708
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.764797091
+      Pitch: 1.53479636
       Target Frame: odom
       Value: Orbit (rviz)
-      Yaw: 6.10799646
+      Yaw: 6.27800035
     Saved: ~
 Window Geometry:
   Displays:

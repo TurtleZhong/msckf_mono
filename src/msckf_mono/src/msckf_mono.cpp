@@ -185,9 +185,9 @@ bool MsckfVio::createRosIO() {
   reset_srv = nh.advertiseService("reset",
       &MsckfVio::resetCallback, this);
 
-  imu_sub = nh.subscribe("imu", 100,
+  imu_sub = nh.subscribe("imu", 200,
       &MsckfVio::imuCallback, this);
-  feature_sub = nh.subscribe("features", 40,
+  feature_sub = nh.subscribe("features", 100,
       &MsckfVio::featureCallback, this);
 
   mocap_odom_sub = nh.subscribe("mocap_odom", 10,
@@ -237,7 +237,7 @@ void MsckfVio::imuCallback(
   imu_msg_buffer.push_back(*msg);
 
   if (!is_gravity_set) {
-    if (imu_msg_buffer.size() < 50) return; //200
+    if (imu_msg_buffer.size() < 200) return; //200
     //if (imu_msg_buffer.size() < 10) return;
     initializeGravityAndBias();
     is_gravity_set = true;

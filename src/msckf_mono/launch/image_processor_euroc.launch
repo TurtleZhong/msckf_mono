@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <launch>
 
   <arg name="robot" default="mono_vio"/>
@@ -11,11 +12,11 @@
       output="screen">
 
       <rosparam command="load" file="$(arg calibration_file)"/>
-      <param name="grid_row" value="6"/>
-      <param name="grid_col" value="10"/>
-      <param name="grid_min_feature_num" value="3"/>
-      <param name="grid_max_feature_num" value="4"/>
-      <param name="pyramid_levels" value="4"/>
+      <param name="grid_row" value="5"/>
+      <param name="grid_col" value="6"/>
+      <param name="grid_min_feature_num" value="5"/>
+      <param name="grid_max_feature_num" value="7"/>
+      <param name="pyramid_levels" value="3"/>
       <param name="patch_size" value="15"/>
       <param name="fast_threshold" value="10"/>
       <param name="max_iteration" value="50"/>

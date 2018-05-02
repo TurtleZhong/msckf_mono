@@ -44,8 +44,8 @@ struct Feature {
       huber_epsilon(0.01),
       estimation_precision(5e-7),
       initial_damping(1e-3),
-      outer_loop_max_iteration(10),
-      inner_loop_max_iteration(10) {
+      outer_loop_max_iteration(15),
+      inner_loop_max_iteration(15) {
       return;
     }
   };
@@ -430,10 +430,10 @@ bool Feature::initializePosition(
 
   if (is_valid_solution)
   {
-//    cout << "***********************" << endl;
-//    cout << "Final position in the world frame is:" << endl;
-//    cout << position << endl;
-//    cout << "***********************" << endl;
+    cout << "*************************************" << endl;
+    cout << "Final position in the world frame is:" << endl;
+    cout << position << endl;
+    cout << "******************End****************" << endl;
     is_initialized = true;
   }
 
