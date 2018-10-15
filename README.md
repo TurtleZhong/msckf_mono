@@ -14,3 +14,9 @@ src/msckf_vio_note 这个是开源版本S-MSCKF的注释版本代码,原版在[�
 
 如有问题直接在这个repo下的issues下面提问就好了. xinliangzhong@foxmail.com
 
+##### 如果觉得有用的话记得给个小星星
+
+
+
+
+
