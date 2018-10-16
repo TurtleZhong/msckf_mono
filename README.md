@@ -1,6 +1,6 @@
 ### 说明
 
-一步步深入了解MSCKF网址: [这里](www.xinliang-zhong.com/msckf_notes/)
+一步步深入了解MSCKF网址: **www.xinliang-zhong.com/msckf_notes/**
 
 这本来是很早以前自己写的一个mono版的msckf. 主要懒得开一个新分支了,就借用了一下.下面对文件夹下的东西说明一下:
 
