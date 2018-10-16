@@ -1,6 +1,6 @@
 ### 说明
 
-一步步深入了解MSCKF网址: [www.xinliang-zhong/msckf_notes/](www.xinliang-zhong/msckf_notes/) 
+一步步深入了解MSCKF网址: [www.xinliang-zhong.com/msckf_notes/](www.xinliang-zhong.com/msckf_notes/)
 
 这本来是很早以前自己写的一个mono版的msckf. 主要懒得开一个新分支了,就借用了一下.下面对文件夹下的东西说明一下:
 
@@ -12,7 +12,7 @@ src/msckf_mine_* 都是很早以前原来自己写的,忽略就好
 
 src/msckf_vio_note 这个是开源版本S-MSCKF的注释版本代码,原版在[这里](https://github.com/KumarRobotics/msckf_vio)
 
-如有问题直接在这个repo下的issues下面提问就好了. xinliangzhong@foxmail.com
+如有问题直接在这个repo下的issues下面提问就好了. 或者私聊xinliangzhong@foxmail.com
 
 ##### 如果觉得有用的话记得给个小星星
 
